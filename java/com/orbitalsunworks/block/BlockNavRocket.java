@@ -27,11 +27,10 @@ import cpw.mods.fml.relauncher.SideOnly;
 
 public class BlockNavRocket extends BlockContainer {
 
-    public static final int HEIGHT = 5;
+    public static final int HEIGHT = 8;
 
     @SideOnly(Side.CLIENT)
     private IIcon iconBase;
-
     private boolean removingColumn = false;
 
     private final ThreadLocal<Boolean> manualDrop = new ThreadLocal<Boolean>() {
@@ -71,6 +70,19 @@ public class BlockNavRocket extends BlockContainer {
     }
 
     @Override
+    public int getLightValue(IBlockAccess world, int x, int y, int z) {
+        int meta = world.getBlockMetadata(x, y, z);
+        int baseY = y - meta;
+        if (baseY >= 0 && baseY < 256) {
+            TileEntity te = world.getTileEntity(x, baseY, z);
+            if (te instanceof TileNavRocket && ((TileNavRocket) te).orbitReturn) {
+                return 13;
+            }
+        }
+        return 4;
+    }
+
+    @Override
     @SideOnly(Side.CLIENT)
     public void registerBlockIcons(IIconRegister reg) {
         this.iconBase = reg.registerIcon(Reference.RESOURCE_PREFIX + "navRocket");
@@ -84,7 +96,7 @@ public class BlockNavRocket extends BlockContainer {
 
     @Override
     public void setBlockBoundsBasedOnState(IBlockAccess world, int x, int y, int z) {
-        this.setBlockBounds(0.12f, 0.0f, 0.12f, 0.88f, 1.0f, 0.88f);
+        this.setBlockBounds(0.08f, 0.0f, 0.08f, 0.92f, 1.0f, 0.92f);
     }
 
     @Override

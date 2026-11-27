@@ -109,7 +109,7 @@ public class TileNavRocket extends TileEntity {
     @SideOnly(Side.CLIENT)
     public AxisAlignedBB getRenderBoundingBox() {
         return AxisAlignedBB.getBoundingBox(
-            this.xCoord - 1, this.yCoord, this.zCoord - 1,
-            this.xCoord + 2, this.yCoord + BlockNavRocket.HEIGHT + 1, this.zCoord + 2);
+            this.xCoord - 4.0, this.yCoord - 1.0, this.zCoord - 4.0,
+            this.xCoord + 5.0, this.yCoord + BlockNavRocket.HEIGHT + 2.5, this.zCoord + 5.0);
     }
 }

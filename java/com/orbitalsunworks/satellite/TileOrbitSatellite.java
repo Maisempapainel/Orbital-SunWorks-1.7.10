@@ -11,30 +11,40 @@ import net.minecraft.network.NetworkManager;
 import net.minecraft.network.Packet;
 import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
 import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.AxisAlignedBB;
 
 import com.orbitalsunworks.OSItems;
 
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
+
 /**
  * Tile da estrutura do satélite na dimensão orbital.
- * Sincroniza nome, tier, vida útil, geração e escudo com o cliente para a HUD.
+ * Inclui getRenderBoundingBox() amplo para não sumir ao olhar de lado.
  */
 public class TileOrbitSatellite extends TileEntity implements IInventory {
 
     public static final int MODULE_SLOTS = 2;
     public static final int REPAIR_SLOT = 2;
     public static final int TOTAL_SLOTS = 3;
-
-    public static final float REPAIR_AMOUNT = 0.10f; // +10% vida por liga
+    public static final float REPAIR_AMOUNT = 0.10f;
 
     private UUID satelliteId;
     private final ItemStack[] slots = new ItemStack[TOTAL_SLOTS];
 
-    // Espelho sincronizado para o cliente (WorldSavedData fica só no servidor).
     private String clientName = "OS-???";
     private int clientTier = 1;
     private float clientHealth = 1.0f;
     private long clientGen = 0L;
     private boolean clientShield = false;
+
+    @Override
+    @SideOnly(Side.CLIENT)
+    public AxisAlignedBB getRenderBoundingBox() {
+        return AxisAlignedBB.getBoundingBox(
+            this.xCoord - 9.0, this.yCoord - 2.0, this.zCoord - 9.0,
+            this.xCoord + 10.0, this.yCoord + 7.5, this.zCoord + 10.0);
+    }
 
     public void setSatelliteId(UUID id) {
         this.satelliteId = id;
@@ -116,7 +126,7 @@ public class TileOrbitSatellite extends TileEntity implements IInventory {
         for (int i = 0; i < MODULE_SLOTS; i++) {
             ItemStack stack = this.slots[i];
             if (stack != null && stack.getItem() == OSItems.itemModuleDebrisShield
-                && !sat.modules.contains("debrisShield")) {
+                    && !sat.modules.contains("debrisShield")) {
                 sat.modules.add("debrisShield");
                 manager.markDirty();
                 this.decrStackSize(i, 1);
@@ -128,7 +138,7 @@ public class TileOrbitSatellite extends TileEntity implements IInventory {
 
         ItemStack repair = this.slots[REPAIR_SLOT];
         if (repair != null && repair.getItem() == OSItems.ingotTitaniumAlloy
-            && sat.health < 1.0f) {
+                && sat.health < 1.0f) {
             manager.repairSatellite(this.satelliteId, REPAIR_AMOUNT);
             this.decrStackSize(REPAIR_SLOT, 1);
             this.worldObj.playSoundEffect(this.xCoord + 0.5, this.yCoord + 0.5,

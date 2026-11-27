@@ -16,10 +16,16 @@ import com.orbitalsunworks.rocket.TileNavRocket;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
+/**
+ * Console de retorno à Terra no Foguete de Navegação estacionado em órbita (176x132).
+ */
 @SideOnly(Side.CLIENT)
 public class GuiReturnHome extends GuiContainer {
 
-    private static final int BTN_X = 48, BTN_Y = 92, BTN_W = 80, BTN_H = 20;
+    private static final int BTN_X = 28;
+    private static final int BTN_Y = 92;
+    private static final int BTN_W = 120;
+    private static final int BTN_H = 22;
 
     private final TileNavRocket tile;
 
@@ -27,7 +33,7 @@ public class GuiReturnHome extends GuiContainer {
         super(new ContainerReturnHome(playerInv, tile));
         this.tile = tile;
         this.xSize = 176;
-        this.ySize = 128;
+        this.ySize = 132;
     }
 
     @Override
@@ -44,24 +50,20 @@ public class GuiReturnHome extends GuiContainer {
         int mx = mouseX - x;
         int my = mouseY - y;
 
-        drawRect(x, y, x + this.xSize, y + this.ySize, 0xFF0B111A);
-        drawRect(x, y, x + this.xSize, y + 1, 0xFF28557A);
-        drawRect(x, y + this.ySize - 1, x + this.xSize, y + this.ySize, 0xFF28557A);
-        drawRect(x, y, x + 1, y + this.ySize, 0xFF28557A);
-        drawRect(x + this.xSize - 1, y, x + this.xSize, y + this.ySize, 0xFF28557A);
+        GuiTheme.drawAerospacePanel(x, y, this.xSize, this.ySize);
+        GuiTheme.drawHeaderBar(x + 3, y + 2, this.xSize - 6, 16);
 
-        drawRect(x + 6, y + 6, x + this.xSize - 6, y + 22, 0xFF132234);
-        drawRect(x + 8, y + 28, x + this.xSize - 8, y + 84, 0xFF101A28);
+        // Painel de telemetria de retorno
+        GuiTheme.drawSubPanel(x + 8, y + 22, this.xSize - 16, 64);
+        drawRect(x + 12, y + 39, x + this.xSize - 12, y + 40, GuiTheme.BORDER_SUB);
+
+        // Caixa interna para coordenadas
+        GuiTheme.drawSubPanel(x + 14, y + 58, this.xSize - 28, 21);
 
         boolean hover = mx >= BTN_X && mx < BTN_X + BTN_W && my >= BTN_Y && my < BTN_Y + BTN_H;
-        int bx = x + BTN_X;
-        int by = y + BTN_Y;
-        this.drawGradientRect(bx, by, bx + BTN_W, by + BTN_H,
-            hover ? 0xFF226E99 : 0xFF174A6B, hover ? 0xFF154566 : 0xFF0E3048);
-        drawRect(bx, by, bx + BTN_W, by + 1, 0xFF55E0FF);
-        drawRect(bx, by + BTN_H - 1, bx + BTN_W, by + BTN_H, 0xFF1E6A8F);
-        drawRect(bx, by, bx + 1, by + BTN_H, 0xFF399EC4);
-        drawRect(bx + BTN_W - 1, by, bx + BTN_W, by + BTN_H, 0xFF399EC4);
+        String btnText = StatCollector.translateToLocal("gui.orbitalsunworks.return.button");
+        GuiTheme.drawButton(this.fontRendererObj, x + BTN_X, y + BTN_Y, BTN_W, BTN_H,
+            btnText, hover, true, false);
     }
 
     @Override
@@ -69,36 +71,34 @@ public class GuiReturnHome extends GuiContainer {
         if (this.tile == null) {
             return;
         }
-        int mx = mouseX - (this.width - this.xSize) / 2;
-        int my = mouseY - (this.height - this.ySize) / 2;
-
         String title = StatCollector.translateToLocal("gui.orbitalsunworks.return.title");
+        while (this.fontRendererObj.getStringWidth(title) > 162 && title.length() > 6) {
+            title = title.substring(0, title.length() - 2) + "...";
+        }
         this.fontRendererObj.drawStringWithShadow(title,
-            (this.xSize - this.fontRendererObj.getStringWidth(title)) / 2, 10, 0x55E0FF);
+            (this.xSize - this.fontRendererObj.getStringWidth(title)) / 2, 6, GuiTheme.TEXT_TITLE);
 
         String status = StatCollector.translateToLocal("gui.orbitalsunworks.return.status");
-        this.fontRendererObj.drawString(status, 14, 34, 0x9FB4C7);
+        this.fontRendererObj.drawString(status, 14, 27, GuiTheme.TEXT_LABEL);
         String ready = StatCollector.translateToLocal("gui.orbitalsunworks.return.ready");
         this.fontRendererObj.drawString(ready,
-            162 - this.fontRendererObj.getStringWidth(ready), 34, 0x7CFC00);
+            162 - this.fontRendererObj.getStringWidth(ready), 27, GuiTheme.TEXT_OK);
 
         String dest = StatCollector.translateToLocal("gui.orbitalsunworks.return.dest");
-        this.fontRendererObj.drawString(dest, 14, 50, 0x9FB4C7);
+        this.fontRendererObj.drawString(dest, 14, 44, GuiTheme.TEXT_LABEL);
         String dimLabel = "DIM " + this.tile.homeDim;
-        this.fontRendererObj.drawString(dimLabel,
-            162 - this.fontRendererObj.getStringWidth(dimLabel), 50, 0xFFFFFF);
+        this.fontRendererObj.drawStringWithShadow(dimLabel,
+            162 - this.fontRendererObj.getStringWidth(dimLabel), 44, GuiTheme.TEXT_GOLD);
 
         String coords = "X " + (int) Math.floor(this.tile.homeX)
-            + "  Y " + (int) Math.floor(this.tile.homeY)
-            + "  Z " + (int) Math.floor(this.tile.homeZ);
+            + "   Y " + (int) Math.floor(this.tile.homeY)
+            + "   Z " + (int) Math.floor(this.tile.homeZ);
         this.fontRendererObj.drawString(coords,
-            (this.xSize - this.fontRendererObj.getStringWidth(coords)) / 2, 66, 0xC7D0DA);
+            (this.xSize - this.fontRendererObj.getStringWidth(coords)) / 2, 65, GuiTheme.TEXT_BODY);
 
-        String launch = StatCollector.translateToLocal("gui.orbitalsunworks.launch");
-        boolean hover = mx >= BTN_X && mx < BTN_X + BTN_W && my >= BTN_Y && my < BTN_Y + BTN_H;
-        this.fontRendererObj.drawStringWithShadow(launch,
-            BTN_X + (BTN_W - this.fontRendererObj.getStringWidth(launch)) / 2,
-            BTN_Y + 6, hover ? 0xFFFF80 : 0xFFE9B0);
+        String foot = "Retorno direto à plataforma de origem";
+        this.fontRendererObj.drawString(foot,
+            (this.xSize - this.fontRendererObj.getStringWidth(foot)) / 2, 118, GuiTheme.TEXT_MUTED);
     }
 
     @Override

@@ -1,5 +1,6 @@
 package com.orbitalsunworks.client.render;
 
+import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.entity.Render;
 import net.minecraft.entity.Entity;
@@ -26,23 +27,29 @@ public class RenderNavRocket extends Render {
         float t = nav.ticksExisted + partialTicks;
         int phase = nav.phaseOf();
 
+        float prevLX = OpenGlHelper.lastBrightnessX;
+        float prevLY = OpenGlHelper.lastBrightnessY;
+        OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, 235f, 235f);
+
         GL11.glPushMatrix();
         GL11.glTranslatef((float) x, (float) y, (float) z);
-
         if (phase == EntityNavRocket.PHASE_LIFTOFF) {
             GL11.glRotatef((float) Math.sin(t * 0.6f) * 0.5f, 0f, 0f, 1f);
         } else if (phase >= EntityNavRocket.PHASE_ASCENT) {
             GL11.glRotatef((float) Math.sin(t * 0.3f) * 1.1f, 0f, 0f, 1f);
             GL11.glRotatef((float) Math.cos(t * 0.25f) * 0.7f, 1f, 0f, 0f);
         }
+        GL11.glScalef(TileNavRocketRenderer.SCALE_XZ,
+            TileNavRocketRenderer.SCALE_Y,
+            TileNavRocketRenderer.SCALE_XZ);
 
         this.model.renderAll();
-
         if (nav.isIgnited() || phase >= EntityNavRocket.PHASE_LIFTOFF) {
             this.renderQuadFlames(phase, t);
         }
-
         GL11.glPopMatrix();
+
+        OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, prevLX, prevLY);
     }
 
     private void renderQuadFlames(int phase, float t) {
@@ -58,8 +65,8 @@ public class RenderNavRocket extends Render {
         GL11.glDisable(GL11.GL_LIGHTING);
         GL11.glDepthMask(false);
         GL11.glDisable(GL11.GL_CULL_FACE);
-
         GL11.glColor4f(0.75f, 0.94f, 1.0f, 0.92f);
+
         float d = 0.19f;
         float[][] nozzles = { { -d, -d }, { d, -d }, { -d, d }, { d, d } };
         for (float[] nz : nozzles) {

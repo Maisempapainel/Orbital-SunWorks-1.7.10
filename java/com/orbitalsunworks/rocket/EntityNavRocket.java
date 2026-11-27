@@ -11,7 +11,6 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.ChunkCoordinates;
 import net.minecraft.util.DamageSource;
-import net.minecraft.util.MathHelper;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
 
@@ -56,7 +55,7 @@ public class EntityNavRocket extends Entity {
 
     public EntityNavRocket(World world) {
         super(world);
-        this.setSize(1.35f, 5.0f);
+        this.setSize(1.9f, 8.0f);
         this.noClip = true;
         this.preventEntitySpawning = true;
     }
@@ -133,7 +132,6 @@ public class EntityNavRocket extends Entity {
     @Override
     public void onUpdate() {
         super.onUpdate();
-
         if (!this.worldObj.isRemote) {
             if (this.riddenByEntity instanceof EntityPlayerMP) {
                 this.lastRider = (EntityPlayerMP) this.riddenByEntity;
@@ -149,12 +147,10 @@ public class EntityNavRocket extends Entity {
             }
             this.syncWatchers();
         }
-
         if (this.phaseOf() == PHASE_PARKED) {
             this.setDead();
             return;
         }
-
         if (!this.worldObj.isRemote && this.riddenByEntity == null && this.phase != PHASE_COUNTDOWN) {
             EntityPlayerMP gone = this.lastRider;
             if (gone != null && !this.itemReturned) {
@@ -163,7 +159,6 @@ public class EntityNavRocket extends Entity {
             this.setDead();
             return;
         }
-
         if (!this.worldObj.isRemote && this.riddenByEntity == null) {
             if (this.ticksExisted > 100) {
                 this.setDead();
@@ -276,10 +271,10 @@ public class EntityNavRocket extends Entity {
     private void padSmoke() {
         for (int i = 0; i < 4; i++) {
             double ang = this.rand.nextDouble() * Math.PI * 2;
-            double r = 0.55 + this.rand.nextDouble() * 0.65;
+            double r = 0.75 + this.rand.nextDouble() * 0.85;
             this.worldObj.spawnParticle("largesmoke",
                 this.posX + Math.cos(ang) * r, this.posY + 0.1, this.posZ + Math.sin(ang) * r,
-                Math.cos(ang) * 0.08, 0.02, Math.sin(ang) * 0.08);
+                Math.cos(ang) * 0.09, 0.02, Math.sin(ang) * 0.09);
         }
     }
 
@@ -293,10 +288,10 @@ public class EntityNavRocket extends Entity {
             this.returnHome(rider);
             return;
         }
-
         int[] c = OrbitStructureManager.coordsForIndex(OrbitStructureManager.indexOf(sat, manager));
-        final double parkX = c[0] + 6.5, parkY = c[1] + 1.0, parkZ = c[2] + 0.5;
-        final int navX = c[0] + 9, navY = c[1], navZ = c[2];
+        // Foguete ancorado bem afastado das asas giratórias do satélite (raio ~7.2)
+        final double parkX = c[0] + 10.5, parkY = c[1] + 1.0, parkZ = c[2] + 1.5;
+        final int navX = c[0] + 15, navY = c[1], navZ = c[2] + 3;
         final String satName = sat.name;
         final UUID riderId = rider.getUniqueID();
         final int fHomeDim = this.homeDim;
@@ -315,7 +310,6 @@ public class EntityNavRocket extends Entity {
                     return;
                 }
                 OrbitStructureManager.ensureStructure(p.worldObj, sat);
-
                 for (int i = BlockNavRocket.HEIGHT - 1; i >= 0; i--) {
                     if (p.worldObj.getBlock(navX, navY + i, navZ) == OSBlocks.blockNavRocket) {
                         p.worldObj.setBlockToAir(navX, navY + i, navZ);
@@ -330,7 +324,6 @@ public class EntityNavRocket extends Entity {
                         riderId, satName, fHomeDim, fHomeX, fHomeY, fHomeZ, fHomeYaw, fHomePitch);
                 }
                 p.worldObj.markBlockForUpdate(navX, navY, navZ);
-
                 p.capabilities.isFlying = true;
                 p.sendPlayerAbilities();
                 OSUtils.sendChat(p, "\u00a7b\u00d3rbita alcan\u00e7ada! \u00a7fVoe at\u00e9 \u00a7e" + satName
@@ -348,7 +341,6 @@ public class EntityNavRocket extends Entity {
         final int dim;
         final double x, y, z;
         final float yaw, pitch;
-
         if (tile.homeSet) {
             dim = tile.homeDim;
             x = tile.homeX;
@@ -366,7 +358,6 @@ public class EntityNavRocket extends Entity {
             yaw = player.rotationYaw;
             pitch = player.rotationPitch;
         }
-
         if (orbitWorld != null) {
             for (int i = BlockNavRocket.HEIGHT - 1; i >= 0; i--) {
                 if (orbitWorld.getBlock(tx, ty + i, tz) == OSBlocks.blockNavRocket) {
@@ -374,7 +365,6 @@ public class EntityNavRocket extends Entity {
                 }
             }
         }
-
         final UUID pid = player.getUniqueID();
         OrbitTransferScheduler.schedule(player, dim, x, y, z, yaw, pitch, new Runnable() {
             @Override
@@ -386,7 +376,6 @@ public class EntityNavRocket extends Entity {
                 }
                 p.capabilities.isFlying = p.capabilities.isCreativeMode;
                 p.sendPlayerAbilities();
-
                 ItemStack stack = new ItemStack(OSItems.itemNavRocket);
                 NBTTagCompound tag = new NBTTagCompound();
                 tag.setInteger("HomeDim", dim);
@@ -394,7 +383,6 @@ public class EntityNavRocket extends Entity {
                 tag.setDouble("HomeY", y);
                 tag.setDouble("HomeZ", z);
                 stack.setTagCompound(tag);
-
                 if (!p.inventory.addItemStackToInventory(stack)) {
                     p.worldObj.spawnEntityInWorld(new EntityItem(p.worldObj, p.posX, p.posY, p.posZ, stack));
                 }
@@ -481,25 +469,25 @@ public class EntityNavRocket extends Entity {
     }
 
     private void spawnExhaust() {
-        float d = 0.19f;
+        float d = 0.19f * 1.55f;
         float[][] nozzles = { { -d, -d }, { d, -d }, { -d, d }, { d, d } };
         for (float[] nz : nozzles) {
             this.worldObj.spawnParticle("flame",
                 this.posX + nz[0], this.posY - 0.05, this.posZ + nz[1],
-                (this.rand.nextDouble() - 0.5) * 0.06, -0.34, (this.rand.nextDouble() - 0.5) * 0.06);
+                (this.rand.nextDouble() - 0.5) * 0.07, -0.40, (this.rand.nextDouble() - 0.5) * 0.07);
         }
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 5; i++) {
             double ang = this.rand.nextDouble() * Math.PI * 2;
-            double r = this.rand.nextDouble() * 0.35;
+            double r = this.rand.nextDouble() * 0.45;
             this.worldObj.spawnParticle("largesmoke",
-                this.posX + Math.cos(ang) * r, this.posY - 0.45, this.posZ + Math.sin(ang) * r,
-                Math.cos(ang) * 0.25, -0.05, Math.sin(ang) * 0.25);
+                this.posX + Math.cos(ang) * r, this.posY - 0.55, this.posZ + Math.sin(ang) * r,
+                Math.cos(ang) * 0.30, -0.06, Math.sin(ang) * 0.30);
         }
     }
 
     @Override
     public double getMountedYOffset() {
-        return 0.75;
+        return 1.20;
     }
 
     @Override

@@ -21,9 +21,6 @@ import cpw.mods.fml.common.network.NetworkRegistry;
 import cpw.mods.fml.common.network.simpleimpl.SimpleNetworkWrapper;
 import cpw.mods.fml.relauncher.Side;
 
-/**
- * Orbital Sunworks - usina solar orbital para Minecraft 1.7.10.
- */
 @Mod(modid = Reference.MOD_ID, name = Reference.MOD_NAME, version = Reference.VERSION)
 public class OrbitalSunworks {
 
@@ -33,13 +30,13 @@ public class OrbitalSunworks {
     @SidedProxy(clientSide = "com.orbitalsunworks.ClientProxy", serverSide = "com.orbitalsunworks.CommonProxy")
     public static CommonProxy proxy;
 
-    /** Canal de rede usado pelo botao Lancar da GUI do foguete. */
     public static SimpleNetworkWrapper network;
 
     @EventHandler
     public void preInit(FMLPreInitializationEvent event) {
         OSBlocks.init();
         OSItems.init();
+
         network = NetworkRegistry.INSTANCE.newSimpleChannel(Reference.CHANNEL);
         network.registerMessage(MessageLaunchRocket.Handler.class, MessageLaunchRocket.class, 0, Side.SERVER);
         network.registerMessage(com.orbitalsunworks.network.MessageLaunchShake.Handler.class,
@@ -56,6 +53,7 @@ public class OrbitalSunworks {
             com.orbitalsunworks.network.MessageReturnHome.class, 6, Side.SERVER);
         network.registerMessage(com.orbitalsunworks.network.MessageReturnViaRocket.Handler.class,
             com.orbitalsunworks.network.MessageReturnViaRocket.class, 7, Side.SERVER);
+
         com.orbitalsunworks.world.orbit.OrbitDimensionManager.register();
         proxy.preInit(event);
     }
@@ -77,14 +75,12 @@ public class OrbitalSunworks {
         FMLCommonHandler.instance().bus().register(new SatelliteTickHandler());
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(
             new com.orbitalsunworks.handler.OSLaunchGuard());
-
-        // PlayerChangedDimensionEvent e PlayerTickEvent rodam no bus do FML.
         FMLCommonHandler.instance().bus().register(
             new com.orbitalsunworks.world.orbit.OrbitFlyHandler());
-
-        // Proteção da órbita: bloqueio total de mobs e colocação de blocos.
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.register(
             new com.orbitalsunworks.world.orbit.OrbitProtectionHandler());
+        FMLCommonHandler.instance().bus().register(
+            new com.orbitalsunworks.world.orbit.SatelliteCollisionPhysics());
     }
 
     @EventHandler
@@ -113,7 +109,6 @@ public class OrbitalSunworks {
         OreDictionary.registerOre("ingotSteel", OSItems.ingotSteel);
         OreDictionary.registerOre("ingotAluminiumAlloy", OSItems.ingotAluminiumAlloy);
         OreDictionary.registerOre("ingotTitaniumAlloy", OSItems.ingotTitaniumAlloy);
-
         OreDictionary.registerOre("itemEnergizedCoal", OSItems.energizedCoal);
         OreDictionary.registerOre("itemCarbonFiber", OSItems.carbonFiber);
         OreDictionary.registerOre("itemSilicon", OSItems.itemSilicon);

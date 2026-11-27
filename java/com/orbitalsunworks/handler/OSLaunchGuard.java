@@ -17,7 +17,7 @@ public class OSLaunchGuard {
 
     public static boolean isAboveLaunchColumn(World world, int x, int y, int z) {
         int baseY = -1;
-        for (int dy = 1; dy <= 6; dy++) {
+        for (int dy = 1; dy <= 10; dy++) {
             Block below = world.getBlock(x, y - dy, z);
             if (below == OSBlocks.blockRocket || below == OSBlocks.blockNavRocket) {
                 baseY = y - dy;
@@ -51,7 +51,8 @@ public class OSLaunchGuard {
                 try {
                     EntityPlayer player = event.player;
                     if (player != null) {
-                        OSUtils.sendChat(player, "\u00a7cN\u00e3o pode colocar blocos acima da plataforma de lan\u00e7amento \u2014 o trajeto do foguete precisa ficar livre!");
+                        OSUtils.sendChat(player,
+                            "\u00a7cN\u00e3o pode colocar blocos acima da plataforma de lan\u00e7amento \u2014 o trajeto do foguete precisa ficar livre!");
                     }
                 } catch (Throwable ignored) {
                 }

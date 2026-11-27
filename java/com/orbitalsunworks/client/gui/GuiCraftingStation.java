@@ -2,7 +2,6 @@ package com.orbitalsunworks.client.gui;
 
 import net.minecraft.client.gui.inventory.GuiContainer;
 import net.minecraft.entity.player.InventoryPlayer;
-import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.StatCollector;
 
 import org.lwjgl.opengl.GL11;
@@ -10,21 +9,18 @@ import org.lwjgl.opengl.GL11;
 import com.orbitalsunworks.craftingstation.ContainerCraftingStation;
 import com.orbitalsunworks.craftingstation.TileCraftingStation;
 
-/**
- * GUI da Estação de Crafting Orbital (v4) — 176x202.
- *
- * Layout (nada sobreposto, status EMBAIXO do campo de crafting):
- * - y 6:   título;
- * - y 17:  grade 3x5 (termina y 68) + slot de resultado à direita (y 35);
- * - y 74:  PAINEL DE STATUS: rótulo à esquerda + tempo/PRONTO à direita,
- *          barra de progresso (moldura na textura) em y 84..90;
- * - y 97:  "Inventário";
- * - y 108: inventário 3x9 (termina y 162); hotbar y 166..184.
- */
-public class GuiCraftingStation extends GuiContainer {
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
 
-    private static final ResourceLocation TEXTURE = new ResourceLocation(
-        "orbitalsunworks", "textures/gui/crafting_station.png");
+/**
+ * HUD aeroespacial da Estação de Crafting Orbital (176x202).
+ * Mantém as coordenadas exatas do ContainerCraftingStation:
+ *  - Grade 3x5: (26 + col*18, 17 + row*18)
+ *  - Resultado: (124, 35)
+ *  - Inventário: y=108 | Hotbar: y=166
+ */
+@SideOnly(Side.CLIENT)
+public class GuiCraftingStation extends GuiContainer {
 
     private final TileCraftingStation tile;
 
@@ -38,9 +34,18 @@ public class GuiCraftingStation extends GuiContainer {
     @Override
     protected void drawGuiContainerForegroundLayer(int mouseX, int mouseY) {
         String title = StatCollector.translateToLocal("gui.orbitalsunworks.craftingStation");
-        this.fontRendererObj.drawString(title, 8, 6, 0x55E0FF);
+        while (this.fontRendererObj.getStringWidth(title) > 134 && title.length() > 6) {
+            title = title.substring(0, title.length() - 2) + "...";
+        }
+        this.fontRendererObj.drawStringWithShadow(title, 8, 4, GuiTheme.TEXT_TITLE);
 
-        // ---- Painel de status (y 74..92): texto FORA da barra ----
+        // Tag 3x5 discreta no cabeçalho à direita
+        this.fontRendererObj.drawString("3x5", 150, 4, GuiTheme.TEXT_GOLD);
+
+        // Micro rótulo sobre o slot de resultado
+        this.fontRendererObj.drawString("OUT", 124, 24, GuiTheme.TEXT_MUTED);
+
+        // Painel de status (y=75..94)
         int state = this.tile.clientState;
         String label;
         String right;
@@ -49,55 +54,90 @@ public class GuiCraftingStation extends GuiContainer {
             label = StatCollector.translateToLocal("gui.orbitalsunworks.crafting");
             float secs = Math.max(0, this.tile.clientTicksRemaining) / 20f;
             right = String.format("%.1fs", secs);
-            rightColor = 0xFFD24A;
+            rightColor = GuiTheme.TEXT_GOLD;
         } else if (state == TileCraftingStation.STATE_READY) {
             label = StatCollector.translateToLocal("gui.orbitalsunworks.done");
             right = StatCollector.translateToLocal("gui.orbitalsunworks.ready");
-            rightColor = 0x7CFC00;
+            rightColor = GuiTheme.TEXT_OK;
         } else {
             label = StatCollector.translateToLocal("gui.orbitalsunworks.idle");
             right = "";
-            rightColor = 0x9FB4C7;
-        }
-        this.fontRendererObj.drawString(label, 8, 74, 0x9FB4C7);
-        if (!right.isEmpty()) {
-            this.fontRendererObj.drawString(right,
-                168 - this.fontRendererObj.getStringWidth(right), 74, rightColor);
+            rightColor = GuiTheme.TEXT_LABEL;
         }
 
-        this.fontRendererObj.drawString(StatCollector.translateToLocal("container.inventory"),
-            8, 97, 0x55E0FF);
+        this.fontRendererObj.drawString(label, 12, 77, GuiTheme.TEXT_LABEL);
+        if (!right.isEmpty()) {
+            this.fontRendererObj.drawString(right,
+                164 - this.fontRendererObj.getStringWidth(right), 77, rightColor);
+        }
+
+        this.fontRendererObj.drawString(
+            StatCollector.translateToLocal("container.inventory"), 8, 97, GuiTheme.TEXT_TITLE);
+
+        // Dica no rodapé abaixo da hotbar
+        String hint = StatCollector.translateToLocal("manual.os.station.note.short");
+        while (this.fontRendererObj.getStringWidth(hint) > 160 && hint.length() > 6) {
+            hint = hint.substring(0, hint.length() - 2) + "...";
+        }
+        this.fontRendererObj.drawString(hint,
+            (this.xSize - this.fontRendererObj.getStringWidth(hint)) / 2, 188, GuiTheme.TEXT_MUTED);
     }
 
     @Override
     protected void drawGuiContainerBackgroundLayer(float partialTicks, int mouseX, int mouseY) {
         GL11.glColor4f(1f, 1f, 1f, 1f);
-        this.mc.getTextureManager().bindTexture(TEXTURE);
         int x = (this.width - this.xSize) / 2;
         int y = (this.height - this.ySize) / 2;
-        this.drawTexturedModalRect(x, y, 0, 0, this.xSize, this.ySize);
 
-        // Preenchimento da barra dentro da moldura da textura (x 9..167, y 85..89).
+        GuiTheme.drawAerospacePanel(x, y, this.xSize, this.ySize);
+        GuiTheme.drawHeaderBar(x + 3, y + 2, this.xSize - 6, 12);
+
+        // Baía da grade 3x5 + resultado
+        GuiTheme.drawSubPanel(x + 7, y + 15, this.xSize - 14, 58);
+
+        // 3 LEDs decorativos indicando as 3 linhas da grade
         int state = this.tile.clientState;
-        int barW = 0;
-        int colorTop, colorBot;
-        if (state == TileCraftingStation.STATE_CRAFTING) {
-            float progress = 0f;
-            if (this.tile.clientTicksTotal > 0) {
-                progress = 1f - (float) this.tile.clientTicksRemaining / this.tile.clientTicksTotal;
+        int ledCol = state == TileCraftingStation.STATE_READY ? 0xFF7CFC00
+            : (state == TileCraftingStation.STATE_CRAFTING ? 0xFF55E0FF : 0xFF284664);
+        for (int row = 0; row < 3; row++) {
+            drawRect(x + 13, y + 23 + row * 18, x + 17, y + 27 + row * 18, ledCol);
+            for (int col = 0; col < 5; col++) {
+                GuiTheme.drawSlotBox(x + 25 + col * 18, y + 16 + row * 18);
             }
-            barW = (int) (158 * Math.min(1f, Math.max(0f, progress)));
-            colorTop = 0xFF55E0FF;
-            colorBot = 0xFF0077AA;
-        } else if (state == TileCraftingStation.STATE_READY) {
-            barW = 158;
-            colorTop = 0xFF7CFC00;
-            colorBot = 0xFF3E9E00;
-        } else {
-            return;
         }
-        if (barW > 0) {
-            this.drawGradientRect(x + 9, y + 85, x + 9 + barW, y + 89, colorTop, colorBot);
+
+        // Seta/chevron entre a grade e o resultado
+        float progress = 0f;
+        if (state == TileCraftingStation.STATE_CRAFTING && this.tile.clientTicksTotal > 0) {
+            progress = Math.min(1f, Math.max(0f,
+                1f - (float) this.tile.clientTicksRemaining / this.tile.clientTicksTotal));
+        } else if (state == TileCraftingStation.STATE_READY) {
+            progress = 1f;
+        }
+        int arrowCol = state == TileCraftingStation.STATE_READY ? 0xFF7CFC00
+            : (state == TileCraftingStation.STATE_CRAFTING ? 0xFF55E0FF : 0xFF324F6E);
+        drawRect(x + 116, y + 41, x + 121, y + 45, arrowCol);
+        drawRect(x + 118, y + 39, x + 120, y + 47, arrowCol);
+
+        // Slot de resultado com destaque por estado
+        int resBorder = state == TileCraftingStation.STATE_READY ? 0xFF7CFC00
+            : (state == TileCraftingStation.STATE_CRAFTING ? 0xFF55E0FF : 0xFF3E6A8E);
+        GuiTheme.drawSlotBox(x + 123, y + 34, resBorder, 0xFF0A121E);
+
+        // Caixa do progresso abaixo da grade
+        GuiTheme.drawSubPanel(x + 7, y + 75, this.xSize - 14, 19);
+        int barTop = state == TileCraftingStation.STATE_READY ? 0xFF7CFC00 : 0xFF55E0FF;
+        int barBot = state == TileCraftingStation.STATE_READY ? 0xFF3E9E00 : 0xFF0077AA;
+        GuiTheme.drawProgressBar(x + 11, y + 87, 154, 5, progress, barTop, barBot);
+
+        // Molduras do inventário 3x9 + hotbar
+        for (int row = 0; row < 3; row++) {
+            for (int col = 0; col < 9; col++) {
+                GuiTheme.drawSlotBox(x + 7 + col * 18, y + 107 + row * 18);
+            }
+        }
+        for (int col = 0; col < 9; col++) {
+            GuiTheme.drawSlotBox(x + 7 + col * 18, y + 165);
         }
     }
 }
