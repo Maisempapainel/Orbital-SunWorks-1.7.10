@@ -1,0 +1,136 @@
+itemGroup.orbitalsunworks=Orbital Sunworks
+
+tile.oreRedmeg.name=Redmeg Ore
+tile.oreYellomite.name=Yellomite Ore
+tile.oreCopper.name=Copper Ore
+tile.oreTin.name=Tin Ore
+tile.oreAluminium.name=Aluminium Ore
+tile.oreTitanium.name=Titanium Ore
+tile.oreEnergizedCoal.name=Energized Coal Ore
+
+tile.blockCladded.name=Carapace Block
+tile.blockCraftingStation.name=Orbital Crafting Station
+tile.blockComputer.name=Central Computer
+tile.blockLaunchPlatform.name=Launch Platform
+tile.blockRocket.name=Tier 1 Rocket
+
+item.ingotRedmeg.name=Redmeg Ingot
+item.ingotYellomite.name=Yellomite Ingot
+item.ingotCopper.name=Copper Ingot
+item.ingotTin.name=Tin Ingot
+item.ingotAluminium.name=Aluminium Ingot
+item.ingotTitanium.name=Titanium Ingot
+item.ingotSteel.name=Steel Ingot
+item.ingotAluminiumAlloy.name=Aluminium Alloy Ingot
+item.ingotTitaniumAlloy.name=Titanium Alloy Ingot
+item.energizedCoal.name=Energized Coal
+item.carbonFiber.name=Carbon Fiber
+item.circuit.name=Electronic Circuit
+item.controlModule.name=Control Module
+item.antennaT1.name=Transmission Antenna (T1)
+item.antennaT2.name=Transmission Antenna (T2)
+item.antennaT3.name=Transmission Antenna (T3)
+item.antennaT4.name=Transmission Antenna (T4)
+item.antennaT5.name=Transmission Antenna (T5)
+item.solarPanelT1.name=Tier 1 Solar Panel
+item.rocketT1.name=Orbital Rocket Tier 1
+item.moduleDebrisShield.name=Module: Debris Shield
+
+container.orbitalsunworks.craftingStation=Orbital Crafting Station
+container.orbitalsunworks.rocket=Rocket Control Panel
+
+gui.orbitalsunworks.craftingStation=ORBITAL CRAFTING STATION
+gui.orbitalsunworks.launch=LAUNCH
+gui.orbitalsunworks.rocket.title=ORBITAL ROCKET T1
+gui.orbitalsunworks.rocket.modules=MODULES
+gui.orbitalsunworks.rocket.health=HULL LIFE
+gui.orbitalsunworks.rocket.shield=DEBRIS SHIELD ACTIVE
+
+tooltip.orbitalsunworks.antenna.tier=Tier
+tooltip.orbitalsunworks.antenna.desc=Transmits satellite power down to Earth
+tooltip.orbitalsunworks.module.debrisShield=Reduces space dust wear by 50%
+
+item.manual.name=Orbital Sunworks Manual
+tooltip.orbitalsunworks.manual=All mod recipes. Right-click to open!
+gui.orbitalsunworks.rocket.shield_short=Debris shield
+manual.os.title=Recipes and procedures
+manual.os.index=Index
+manual.os.index.furnace=Furnace: ores and ingots (pages 1-7)
+manual.os.index.vanilla=Crafting table: basic materials (pages 8-10)
+manual.os.index.station=Crafting Station: components and rocket (pages 11+)
+manual.os.howto=How to use: navigate with the arrows (or the ← → keys). Hover the icons to see each item's name. The Orbital Crafting Station has a 3x5 grid - vanilla table recipes also work in it.
+manual.os.type.furnace=FURNACE
+manual.os.type.vanilla=CRAFTING TABLE
+manual.os.type.station=ORBITAL CRAFTING STATION
+manual.os.furnace.note=Put the ore in the top input and fuel below. Regular coal works.
+manual.os.shapeless.note=Shapeless recipe: items can be anywhere in the grid.
+manual.os.smelt.redmeg=Redmeg: Ore -> Ingot
+manual.os.smelt.yellomite=Yellomite: Ore -> Ingot
+manual.os.smelt.copper=Copper: Ore -> Ingot
+manual.os.smelt.tin=Tin: Ore -> Ingot
+manual.os.smelt.aluminium=Aluminium: Ore -> Ingot
+manual.os.smelt.titanium=Titanium: Ore -> Ingot
+manual.os.smelt.coal=Energized Coal: Ore -> 2x
+manual.os.craft.fiber=Carbon Fiber (2x)
+manual.os.craft.steel=Steel (2x)
+manual.os.craft.station=Orbital Crafting Station
+manual.os.craft.alloyAlu=Aluminium Alloy (3x)
+manual.os.craft.alloyTi=Titanium Alloy (3x)
+manual.os.craft.circuit=Electronic Circuit (2x)
+manual.os.craft.control=Control Module
+manual.os.craft.antenna1=Transmission Antenna T1
+manual.os.craft.antenna2=Transmission Antenna T2
+manual.os.craft.antenna3=Transmission Antenna T3
+manual.os.craft.antenna4=Transmission Antenna T4
+manual.os.craft.antenna5=Transmission Antenna T5
+manual.os.craft.solar=Tier 1 Solar Panel (2x)
+manual.os.craft.cladded=Carapace Block (4x)
+manual.os.craft.computer=Central Computer
+manual.os.craft.shield=Debris Shield
+manual.os.craft.platform=Launch Platform (9x)
+manual.os.craft.rocket=Orbital Rocket Tier 1
+tile.oreSilicon.name=Silicon Ore
+item.silicon.name=Silicon
+gui.orbitalsunworks.crafting=FABRICATING...
+manual.os.smelt.silicon=Silicon: Ore -> Silicon
+manual.os.craft.manual=Orbital Sunworks Manual
+manual.os.index.furnace=Furnace: ores and ingots (pages 1-8)
+manual.os.index.vanilla=Crafting table: basic materials (pages 9-12)
+manual.os.index.station=Crafting Station: components and rocket (pages 13+)
+manual.os.station.note=The Crafting Station takes TIME: click the result to start. Small: 3s. Medium: 6s. Rocket: 25s. Crafting continues with the GUI closed!
+gui.orbitalsunworks.ready=READY!
+manual.os.station.note.short=Click the result to start crafting (time shown in the corner).
+gui.orbitalsunworks.idle=IDLE
+gui.orbitalsunworks.done=CRAFTING
+gui.orbitalsunworks.launch.blocked=TRAJECTORY BLOCKED
+
+# v0.6.0 — Navigation rocket and orbit
+item.navRocket.name=Navigation Rocket
+gui.orbitalsunworks.nav.title=YOUR SATELLITES IN ORBIT
+gui.orbitalsunworks.nav.none=You have no satellites in orbit yet.
+gui.orbitalsunworks.nav.hint=Build a Tier 1 rocket and launch it from the platform!
+gui.orbitalsunworks.nav.header.name=SATELLITE
+gui.orbitalsunworks.nav.header.health=HEALTH
+gui.orbitalsunworks.nav.header.tier=TIER
+gui.orbitalsunworks.sat.health=USEFUL LIFE
+gui.orbitalsunworks.sat.generation=GENERATION
+gui.orbitalsunworks.sat.modules=MODULES
+gui.orbitalsunworks.sat.shield=Debris shield
+gui.orbitalsunworks.sat.repair=REPAIR (Titanium Alloy +10%)
+gui.orbitalsunworks.sat.back=BACK TO EARTH
+container.orbitalsunworks.orbitSatellite=Satellite Structure
+manual.os.craft.navrocket=Navigation Rocket
+
+# v0.7.0 — Navigation rocket as a BLOCK on the platform
+tile.blockNavRocket.name=Navigation Rocket
+
+# v0.8.0 — orbital map (new GUI) and parked rocket
+gui.orbitalsunworks.nav.footer=Pick a destination and press LAUNCH to board
+gui.orbitalsunworks.return.title=NAVIGATION ROCKET — RETURN
+gui.orbitalsunworks.return.status=SHIP STATUS
+gui.orbitalsunworks.return.ready=READY
+gui.orbitalsunworks.return.dest=DESTINATION
+gui.orbitalsunworks.return.button=START RETURN
+gui.orbitalsunworks.return.note=The return trip is immediate, no maneuvers: you will be teleported straight back to the original launch platform, with the rocket repositioned and your inventory intact.
+tile.blockNavRocket.name=Navigation Rocket
+item.navRocket.name=Navigation Rocket

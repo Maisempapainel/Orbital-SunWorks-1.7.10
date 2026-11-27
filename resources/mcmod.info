@@ -1,0 +1,16 @@
+[
+{
+  "modid": "orbitalsunworks",
+  "name": "Orbital Sunworks",
+  "description": "Construa foguetes, lance satelites solares em orbita e gere milhoes de RF. Usina solar orbital para Minecraft 1.7.10.",
+  "version": "${version}",
+  "mcversion": "${mcversion}",
+  "url": "",
+  "updateUrl": "",
+  "authorList": ["Voce"],
+  "credits": "",
+  "logoFile": "",
+  "screenshots": [],
+  "dependencies": []
+}
+]

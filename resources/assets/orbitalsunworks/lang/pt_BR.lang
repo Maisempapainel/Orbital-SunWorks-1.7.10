@@ -1,0 +1,136 @@
+itemGroup.orbitalsunworks=Orbital Sunworks
+
+tile.oreRedmeg.name=Minério de Redmeg
+tile.oreYellomite.name=Minério de Yellomite
+tile.oreCopper.name=Minério de Cobre
+tile.oreTin.name=Minério de Estanho
+tile.oreAluminium.name=Minério de Alumínio
+tile.oreTitanium.name=Minério de Titânio
+tile.oreEnergizedCoal.name=Minério de Carvão Energizado
+
+tile.blockCladded.name=Bloco de Carapaça
+tile.blockCraftingStation.name=Estação de Crafting Orbital
+tile.blockComputer.name=Computador Central
+tile.blockLaunchPlatform.name=Plataforma de Lançamento
+tile.blockRocket.name=Foguete Tier 1
+
+item.ingotRedmeg.name=Lingote de Redmeg
+item.ingotYellomite.name=Lingote de Yellomite
+item.ingotCopper.name=Lingote de Cobre
+item.ingotTin.name=Lingote de Estanho
+item.ingotAluminium.name=Lingote de Alumínio
+item.ingotTitanium.name=Lingote de Titânio
+item.ingotSteel.name=Lingote de Aço
+item.ingotAluminiumAlloy.name=Lingote de Liga de Alumínio
+item.ingotTitaniumAlloy.name=Lingote de Liga de Titânio
+item.energizedCoal.name=Carvão Energizado
+item.carbonFiber.name=Fibra de Carbono
+item.circuit.name=Circuito Eletrônico
+item.controlModule.name=Módulo de Controle
+item.antennaT1.name=Antena de Transmissão (T1)
+item.antennaT2.name=Antena de Transmissão (T2)
+item.antennaT3.name=Antena de Transmissão (T3)
+item.antennaT4.name=Antena de Transmissão (T4)
+item.antennaT5.name=Antena de Transmissão (T5)
+item.solarPanelT1.name=Painel Solar Tier 1
+item.rocketT1.name=Foguete Orbital Tier 1
+item.moduleDebrisShield.name=Módulo: Escudo de Detrito
+
+container.orbitalsunworks.craftingStation=Estação de Crafting Orbital
+container.orbitalsunworks.rocket=Painel do Foguete
+
+gui.orbitalsunworks.craftingStation=ESTAÇÃO DE CRAFTING ORBITAL
+gui.orbitalsunworks.launch=LANÇAR
+gui.orbitalsunworks.rocket.title=FOGUETE ORBITAL T1
+gui.orbitalsunworks.rocket.modules=MÓDULOS
+gui.orbitalsunworks.rocket.health=VIDA ÚTIL
+gui.orbitalsunworks.rocket.shield=ESCUDO DE DETRITO ATIVO
+
+tooltip.orbitalsunworks.antenna.tier=Tier
+tooltip.orbitalsunworks.antenna.desc=Transmite energia do satélite para a Terra
+tooltip.orbitalsunworks.module.debrisShield=Reduz em 50% o desgaste por poeira espacial
+
+item.manual.name=Manual do Orbital Sunworks
+tooltip.orbitalsunworks.manual=Todas as receitas do mod. Clique com o direito!
+gui.orbitalsunworks.rocket.shield_short=Escudo de detrito
+manual.os.title=Receitas e procedimentos
+manual.os.index=Índice
+manual.os.index.furnace=Fornalha: minérios e lingotes (págs. 1-8)
+manual.os.index.vanilla=Mesa de trabalho: materiais básicos (págs. 8-10)
+manual.os.index.station=Estação de Crafting: componentes e foguete (págs. 11+)
+manual.os.howto=Como usar: navegue com as setas (ou as teclas ← →). Passe o mouse nos ícones para ver o nome de cada item. A Estação de Crafting Orbital tem grade 3x5 - receitas da mesa vanilla também funcionam nela.
+manual.os.type.furnace=FORNALHA
+manual.os.type.vanilla=MESA DE TRABALHO
+manual.os.type.station=ESTAÇÃO DE CRAFTING ORBITAL
+manual.os.furnace.note=Coloque o minério na entrada de cima e combustível embaixo. Carvão comum serve.
+manual.os.shapeless.note=Receita sem formato: os itens podem estar em qualquer posição da grade.
+manual.os.smelt.redmeg=Redmeg: Minério -> Lingote
+manual.os.smelt.yellomite=Yellomite: Minério -> Lingote
+manual.os.smelt.copper=Cobre: Minério -> Lingote
+manual.os.smelt.tin=Estanho: Minério -> Lingote
+manual.os.smelt.aluminium=Alumínio: Minério -> Lingote
+manual.os.smelt.titanium=Titânio: Minério -> Lingote
+manual.os.smelt.coal=Carvão Energizado: Minério -> 2x
+manual.os.craft.fiber=Fibra de Carbono (2x)
+manual.os.craft.steel=Aço (2x)
+manual.os.craft.station=Estação de Crafting Orbital
+manual.os.craft.alloyAlu=Liga de Alumínio (3x)
+manual.os.craft.alloyTi=Liga de Titânio (3x)
+manual.os.craft.circuit=Circuito Eletrônico (2x)
+manual.os.craft.control=Módulo de Controle
+manual.os.craft.antenna1=Antena de Transmissão T1
+manual.os.craft.antenna2=Antena de Transmissão T2
+manual.os.craft.antenna3=Antena de Transmissão T3
+manual.os.craft.antenna4=Antena de Transmissão T4
+manual.os.craft.antenna5=Antena de Transmissão T5
+manual.os.craft.solar=Painel Solar T1 (2x)
+manual.os.craft.cladded=Bloco Revestido (4x)
+manual.os.craft.computer=Computador Central
+manual.os.craft.shield=Escudo de Detrito
+manual.os.craft.platform=Plataforma de Lançamento (9x)
+manual.os.craft.rocket=Foguete Orbital Tier 1
+tile.oreSilicon.name=Minério de Silício
+item.silicon.name=Silício
+gui.orbitalsunworks.crafting=FABRICANDO...
+manual.os.smelt.silicon=Silício: Minério -> Silício
+manual.os.craft.manual=Manual do Orbital Sunworks
+manual.os.index.furnace=Fornalha: minérios e lingotes (págs. 1-8)
+manual.os.index.vanilla=Mesa de trabalho: materiais básicos (págs. 9-12)
+manual.os.index.station=Estação de Crafting: componentes e foguete (págs. 13+)
+manual.os.station.note=A Estação de Crafting fabrica com TEMPO: clique no resultado para iniciar. Pequenos: 3s. Médios: 6s. Foguete: 25s. A fabricação continua com a GUI fechada!
+gui.orbitalsunworks.ready=PRONTO!
+manual.os.station.note.short=Clique no resultado para iniciar a fabricação (o tempo aparece no canto).
+gui.orbitalsunworks.idle=AGUARDANDO
+gui.orbitalsunworks.done=FABRICAÇÃO
+gui.orbitalsunworks.launch.blocked=TRAJETO BLOQUEADO
+
+# v0.6.0 — Foguete de navegação e órbita
+item.navRocket.name=Foguete de Navegação
+gui.orbitalsunworks.nav.title=SEUS SATÉLITES EM ÓRBITA
+gui.orbitalsunworks.nav.none=Você ainda não tem satélites em órbita.
+gui.orbitalsunworks.nav.hint=Monte um foguete Tier 1 e lance da plataforma!
+gui.orbitalsunworks.nav.header.name=SATÉLITE
+gui.orbitalsunworks.nav.header.health=VIDA
+gui.orbitalsunworks.nav.header.tier=TIER
+gui.orbitalsunworks.sat.health=VIDA ÚTIL
+gui.orbitalsunworks.sat.generation=GERAÇÃO
+gui.orbitalsunworks.sat.modules=MÓDULOS
+gui.orbitalsunworks.sat.shield=Escudo de detrito
+gui.orbitalsunworks.sat.repair=REPARO (Liga de Titânio +10%)
+gui.orbitalsunworks.sat.back=VOLTAR À TERRA
+container.orbitalsunworks.orbitSatellite=Estrutura do Satélite
+manual.os.craft.navrocket=Foguete de Navegação
+
+# v0.7.0 — Foguete de navegação como BLOCO na plataforma
+tile.blockNavRocket.name=Foguete de Navegação
+
+# v0.8.0 — mapa orbital (GUI nova) e nave estacionada
+gui.orbitalsunworks.nav.footer=Escolha o destino e clique LANÇAR para embarcar
+gui.orbitalsunworks.return.title=NAVE DE NAVEGAÇÃO — RETORNO
+gui.orbitalsunworks.return.status=STATUS DA NAVE
+gui.orbitalsunworks.return.ready=PRONTA
+gui.orbitalsunworks.return.dest=DESTINO
+gui.orbitalsunworks.return.button=INICIAR RETORNO
+gui.orbitalsunworks.return.note=O retorno é imediato, sem manobras: você será teletransportado de volta à plataforma de lançamento de origem, com o foguete reposicionado e seu inventário intacto.
+tile.blockNavRocket.name=Foguete de Navegação
+item.navRocket.name=Foguete de Navegação
