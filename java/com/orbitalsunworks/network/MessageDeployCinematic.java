@@ -1,8 +1,9 @@
 package com.orbitalsunworks.network;
 
 import io.netty.buffer.ByteBuf;
-
 import java.util.UUID;
+
+import com.orbitalsunworks.client.gui.GuiDeployCinematic;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
@@ -10,22 +11,6 @@ import cpw.mods.fml.common.network.simpleimpl.MessageContext;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
-/**
- * Pacote S->C: dispara a CINEMÁTICA DE DEPLOY no cliente do jogador que
- * lançou o foguete (só ele recebe).
- *
- * O que a animação mostra (GuiDeployCinematic):
- *  1. tela escurece;
- *  2. a cápsula lançadora abre (as duas metades vão para trás);
- *  3. o satélite sai de dentro;
- *  4. os painéis solares desdobram até o formato final (foto do usuário:
- *     corpo central + painéis brancos nas laterais + antena);
- *  5. a cápsula fica para trás e some.
- *
- * O satélite de verdade (estrutura) já foi registrado pelo manager e a
- * estrutura na dimensão orbital já foi spawnada; a cinematic é só o
- * "filme" para o dono.
- */
 public class MessageDeployCinematic implements IMessage {
 
     private String satId;
@@ -104,13 +89,10 @@ public class MessageDeployCinematic implements IMessage {
         @Override
         @SideOnly(Side.CLIENT)
         public IMessage onMessage(MessageDeployCinematic message, MessageContext ctx) {
-            // v0.10.0: SEM GUI cinematic (o usuário detonou a antiga —
-            // "porquíssima"). Agora é IN-WORLD: um toast de missão
-            // estiloso + som, e o jogador CONTINUA JOGANDO (o satélite
-            // real está na órbita; a "cinemática" é ver a estrutura).
-            com.orbitalsunworks.client.handler.OrbitDeployToast.show(
-                message.getSatName(), message.getSatTier(),
-                message.getSatHealth());
+            GuiDeployCinematic.TickOpener.scheduleOpen(
+                message.getSatId(), message.getSatName(),
+                message.getSatTier(), message.getSatHealth(),
+                message.hasDebrisShield());
             return null;
         }
     }

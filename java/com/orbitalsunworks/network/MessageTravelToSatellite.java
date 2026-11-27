@@ -1,43 +1,29 @@
 package com.orbitalsunworks.network;
 
 import io.netty.buffer.ByteBuf;
-
 import java.util.UUID;
 
+import net.minecraft.entity.item.EntityItem;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.ItemStack;
-import net.minecraft.tileentity.TileEntity;
 import net.minecraft.world.World;
 
 import com.orbitalsunworks.OSBlocks;
 import com.orbitalsunworks.OSItems;
+import com.orbitalsunworks.block.BlockNavRocket;
 import com.orbitalsunworks.rocket.EntityNavRocket;
-import com.orbitalsunworks.rocket.TileNavRocket;
 import com.orbitalsunworks.satellite.SatelliteManager;
 import com.orbitalsunworks.util.OSUtils;
+import com.orbitalsunworks.world.orbit.OrbitDimensionManager;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
 import cpw.mods.fml.common.network.simpleimpl.MessageContext;
 
-/**
- * C->S: "IR" no mapa orbital (v0.7.0 — fluxo NOVO via bloco na plataforma).
- *
- * O foguete de navegação agora é um BLOCO posicionado na plataforma (igual
- * ao T1). O jogador clica no bloco -> GUI de seleção -> IR:
- *  1. servidor valida: bloco do nav existe e completo, satélite é do
- *     jogador, jogador perto e desmontado, sem viagem duplicada;
- *  2. remove a COLUNA do bloco (a nave vira entidade);
- *  3. spawna a EntityNavRocket NO PAD e monta o jogador nela (a câmera
- *     F5 é acionada no cliente ao detectar o mount);
- *  4. countdown -> liftoff -> warp -> teleporta pra órbita.
- *
- * A "casa" (retorno) vem do tile do bloco (o pad onde ele foi montado).
- */
 public class MessageTravelToSatellite implements IMessage {
 
     private String satUuid;
-    private int x, y, z; // base do bloco do nav
+    private int x, y, z;
 
     public MessageTravelToSatellite() {
     }
@@ -80,91 +66,71 @@ public class MessageTravelToSatellite implements IMessage {
             EntityPlayerMP player = ctx.getServerHandler().playerEntity;
             World world = player.worldObj;
 
-            // 1) Validacoes (seguranca de servidor):
+            if (OrbitDimensionManager.isOrbitWorld(world)) {
+                return null;
+            }
+
             UUID satId;
             try {
                 satId = UUID.fromString(message.satUuid);
             } catch (IllegalArgumentException e) {
                 return null;
             }
-            // Bloco do nav existe e é a base?
+
             if (world.getBlock(message.x, message.y, message.z) != OSBlocks.blockNavRocket
-                || world.getBlockMetadata(message.x, message.y, message.z) != 0) {
-                OSUtils.sendChat(player, "§cFoguete não encontrado na plataforma!");
+                    || world.getBlockMetadata(message.x, message.y, message.z) != 0) {
+                OSUtils.sendChat(player, "\u00a7cFoguete n\u00e3o encontrado na plataforma!");
                 return null;
             }
-            // Alcance e estado do jogador.
             if (player.getDistanceSq(message.x + 0.5, message.y + 0.5, message.z + 0.5) > 64) {
                 return null;
             }
             if (player.ridingEntity != null) {
                 return null;
             }
-            // Satélite pertence ao jogador?
+
             SatelliteManager.Satellite sat = SatelliteManager.get(world).getById(satId);
             if (sat == null || !player.getUniqueID().equals(sat.owner)) {
-                OSUtils.sendChat(player, "§cSatélite inválido ou não é seu!");
+                OSUtils.sendChat(player, "\u00a7cSat\u00e9lite inv\u00e1lido ou n\u00e3o \u00e9 seu!");
                 return null;
             }
-            // Já existe uma viagem EM VOO deste jogador? (spam-click; a
-            // nave ESTACIONADA na órbita não conta — ela já chegou).
+
             for (Object o : world.loadedEntityList) {
                 if (o instanceof EntityNavRocket) {
                     EntityNavRocket r = (EntityNavRocket) o;
                     if (r.getOwnerUUID() != null && r.getOwnerUUID().equals(player.getUniqueID())
-                        && !r.isDead
-                        && r.phaseOf() != EntityNavRocket.PHASE_PARKED) {
-                        OSUtils.sendChat(player, "§cSua nave já está em viagem!");
+                            && !r.isDead && r.phaseOf() != EntityNavRocket.PHASE_PARKED) {
+                        OSUtils.sendChat(player, "\u00a7cSua nave j\u00e1 est\u00e1 em viagem!");
                         return null;
                     }
                 }
             }
-            // Nave estacionada antiga do jogador: recolhe (o bloco será
-            // reposto no pad desta nova viagem — ele só tem UMA nave).
-            for (Object o : world.loadedEntityList) {
-                if (o instanceof EntityNavRocket) {
-                    EntityNavRocket r = (EntityNavRocket) o;
-                    if (r.getOwnerUUID() != null && r.getOwnerUUID().equals(player.getUniqueID())
-                        && !r.isDead && r.phaseOf() == EntityNavRocket.PHASE_PARKED) {
-                        r.setDead();
-                    }
-                }
-            }
 
-            // 2) Casa do tile (onde voltar depois).
             int homeDim = world.provider.dimensionId;
-            double homeX = message.x + 2.5, homeY = message.y, homeZ = message.z + 0.5;
-            TileEntity te = world.getTileEntity(message.x, message.y, message.z);
-            if (te instanceof TileNavRocket && ((TileNavRocket) te).homeSet) {
-                TileNavRocket tile = (TileNavRocket) te;
-                homeDim = tile.homeDim;
-                homeX = tile.homeX;
-                homeY = tile.homeY;
-                homeZ = tile.homeZ;
-            }
+            double homeX = player.posX;
+            double homeY = player.posY;
+            double homeZ = player.posZ;
+            float homeYaw = player.rotationYaw;
+            float homePitch = player.rotationPitch;
 
-            // 3) Remove a coluna do bloco (3 partes) — a vira entidade.
-            for (int i = 2; i >= 0; i--) {
+            for (int i = BlockNavRocket.HEIGHT - 1; i >= 0; i--) {
                 if (world.getBlock(message.x, message.y + i, message.z) == OSBlocks.blockNavRocket) {
                     world.setBlockToAir(message.x, message.y + i, message.z);
                 }
             }
 
-            // 4) Spawna a entidade NO PAD e monta o jogador.
             EntityNavRocket rocket = new EntityNavRocket(world,
                 message.x + 0.5, message.y, message.z + 0.5, satId,
-                homeDim, homeX, homeY, homeZ, player.getUniqueID());
+                homeDim, homeX, homeY, homeZ, homeYaw, homePitch, player.getUniqueID());
             if (!world.spawnEntityInWorld(rocket)) {
-                // Falhou o spawn (não deveria): devolve o item pro jogador.
                 ItemStack give = new ItemStack(OSItems.itemNavRocket);
                 if (!player.inventory.addItemStackToInventory(give)) {
-                    world.spawnEntityInWorld(new net.minecraft.entity.item.EntityItem(
-                        world, player.posX, player.posY, player.posZ, give));
+                    world.spawnEntityInWorld(new EntityItem(world, player.posX, player.posY, player.posZ, give));
                 }
                 return null;
             }
             player.mountEntity(rocket);
-            OSUtils.sendChat(player, "§aDestino: §f" + sat.name + "§a. Lançamento em 3s...");
+            OSUtils.sendChat(player, "\u00a7aDestino: \u00a7f" + sat.name + "\u00a7a. Lan\u00e7amento em 3s...");
             return null;
         }
     }

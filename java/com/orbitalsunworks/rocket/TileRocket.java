@@ -6,13 +6,11 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
 import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.AxisAlignedBB;
 
-/**
- * Tile do Foguete Tier 1 posicionado na plataforma.
- *
- * Slots: 2 slots de módulos no Tier 1.
- * Guarda também o "estado" do foguete (tier, vida útil).
- */
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
+
 public class TileRocket extends TileEntity implements IInventory {
 
     public static final int MODULE_SLOTS = 2;
@@ -21,8 +19,15 @@ public class TileRocket extends TileEntity implements IInventory {
     private final ItemStack[] slots = new ItemStack[TOTAL_SLOTS];
 
     private int tier = 1;
-    /** Vida útil 1.0 = 100% .. 0.0 = 0%. */
     private float health = 1.0f;
+
+    @Override
+    @SideOnly(Side.CLIENT)
+    public AxisAlignedBB getRenderBoundingBox() {
+        return AxisAlignedBB.getBoundingBox(
+            this.xCoord - 1.5, this.yCoord, this.zCoord - 1.5,
+            this.xCoord + 2.5, this.yCoord + 7.0, this.zCoord + 2.5);
+    }
 
     public void setTier(int tier) {
         this.tier = tier;
@@ -40,7 +45,6 @@ public class TileRocket extends TileEntity implements IInventory {
         return health;
     }
 
-    /** True se há um Escudo de Detrito instalado (mitiga desgaste). */
     public boolean hasDebrisShield() {
         for (int i = 0; i < TOTAL_SLOTS; i++) {
             if (slots[i] != null
@@ -51,10 +55,6 @@ public class TileRocket extends TileEntity implements IInventory {
         return false;
     }
 
-    /**
-     * Ids de módulos instalados (para o EntityRocket levar ao manager
-     * quando o foguete é lançado): "debrisShield" etc.
-     */
     public java.util.List<String> getModuleIds() {
         java.util.List<String> ids = new java.util.ArrayList<String>();
         for (int i = 0; i < TOTAL_SLOTS; i++) {
@@ -123,7 +123,7 @@ public class TileRocket extends TileEntity implements IInventory {
 
     @Override
     public int getInventoryStackLimit() {
-        return 1; // módulos não empilham
+        return 1;
     }
 
     @Override
@@ -142,11 +142,9 @@ public class TileRocket extends TileEntity implements IInventory {
 
     @Override
     public boolean isItemValidForSlot(int slot, ItemStack stack) {
-        // Só aceita itens de módulo.
         return stack != null && stack.getItem() instanceof com.orbitalsunworks.item.ItemModule;
     }
 
-    /** Dropa os módulos quando o bloco é quebrado. */
     public void dropInventory(net.minecraft.world.World world, int x, int y, int z) {
         for (int i = 0; i < TOTAL_SLOTS; i++) {
             ItemStack stack = slots[i];
@@ -158,10 +156,6 @@ public class TileRocket extends TileEntity implements IInventory {
             }
         }
     }
-
-    // ------------------------------------------------------------------
-    // NBT
-    // ------------------------------------------------------------------
 
     @Override
     public void readFromNBT(NBTTagCompound tag) {

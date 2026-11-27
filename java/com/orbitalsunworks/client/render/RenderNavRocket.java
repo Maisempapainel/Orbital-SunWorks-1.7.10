@@ -1,78 +1,99 @@
 package com.orbitalsunworks.client.render;
 
+import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.client.renderer.entity.Render;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.ResourceLocation;
 
 import org.lwjgl.opengl.GL11;
 
+import com.orbitalsunworks.rocket.EntityNavRocket;
+
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
-/**
- * Render da EntityNavRocket (foguete de navegação, v0.8.0).
- *
- * Dois estados visuais:
- *  - EM VOO (countdown→warp): o ModelRocket em escala 1.2x com o
- *    balanço da subida (o jogador montado é renderizado pelo vanilla);
- *  - ESTACIONADA na órbita (parked): a nave flutua com bob suave, uma
- *    LUZ DE MOTOR pulsando embaixo (o farol de "esperando o retorno")
- *    e um leve giro — ela é o ponto de referência do jogador.
- */
 @SideOnly(Side.CLIENT)
 public class RenderNavRocket extends Render {
 
-    private final ModelRocket model = new ModelRocket();
+    private static final ResourceLocation TEXTURE_FLAME = new ResourceLocation(
+        "orbitalsunworks", "textures/models/rocket_flame.png");
+
+    private final ModelNavRocket model = new ModelNavRocket();
 
     @Override
-    public void doRender(Entity entity, double x, double y, double z,
-            float yaw, float partialTicks) {
+    public void doRender(Entity entity, double x, double y, double z, float yaw, float partialTicks) {
+        EntityNavRocket nav = (EntityNavRocket) entity;
+        float t = nav.ticksExisted + partialTicks;
+        int phase = nav.phaseOf();
+
         GL11.glPushMatrix();
         GL11.glTranslatef((float) x, (float) y, (float) z);
-        com.orbitalsunworks.rocket.EntityNavRocket nav =
-            (com.orbitalsunworks.rocket.EntityNavRocket) entity;
-        float phase = nav.phaseOf();
-        if (phase == com.orbitalsunworks.rocket.EntityNavRocket.PHASE_PARKED) {
-            // Estacionada: gira devagar (vida na órbita).
-            GL11.glRotatef((entity.ticksExisted + partialTicks) * 0.5f % 360f, 0f, 1f, 0f);
-        } else if (phase >= com.orbitalsunworks.rocket.EntityNavRocket.PHASE_LIFTOFF) {
-            GL11.glRotatef((float) (Math.sin(entity.ticksExisted * 0.3) * 1.5), 0f, 0f, 1f);
-        }
-        GL11.glScalef(1.2f, 1.2f, 1.2f);
-        this.model.renderAll();
-        GL11.glPopMatrix();
 
-        // Luz de engine quando estacionada (glow pulsante embaixo).
-        if (phase == com.orbitalsunworks.rocket.EntityNavRocket.PHASE_PARKED) {
-            float pulse = 0.5f + 0.5f
-                * (float) Math.sin((entity.ticksExisted + partialTicks) * 0.15);
+        if (phase == EntityNavRocket.PHASE_LIFTOFF) {
+            GL11.glRotatef((float) Math.sin(t * 0.6f) * 0.5f, 0f, 0f, 1f);
+        } else if (phase >= EntityNavRocket.PHASE_ASCENT) {
+            GL11.glRotatef((float) Math.sin(t * 0.3f) * 1.1f, 0f, 0f, 1f);
+            GL11.glRotatef((float) Math.cos(t * 0.25f) * 0.7f, 1f, 0f, 0f);
+        }
+
+        this.model.renderAll();
+
+        if (nav.isIgnited() || phase >= EntityNavRocket.PHASE_LIFTOFF) {
+            this.renderQuadFlames(phase, t);
+        }
+
+        GL11.glPopMatrix();
+    }
+
+    private void renderQuadFlames(int phase, float t) {
+        float pulse = 0.88f + 0.12f * (float) Math.sin(t * 2.1f);
+        float len = phase == EntityNavRocket.PHASE_COUNTDOWN ? 0.55f * pulse
+            : (phase == EntityNavRocket.PHASE_WARP ? 2.6f * pulse : 1.85f * pulse);
+        float rad = phase == EntityNavRocket.PHASE_COUNTDOWN ? 0.11f : 0.16f;
+
+        this.bindTexture(TEXTURE_FLAME);
+        GL11.glPushMatrix();
+        GL11.glEnable(GL11.GL_BLEND);
+        GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE);
+        GL11.glDisable(GL11.GL_LIGHTING);
+        GL11.glDepthMask(false);
+        GL11.glDisable(GL11.GL_CULL_FACE);
+
+        GL11.glColor4f(0.75f, 0.94f, 1.0f, 0.92f);
+        float d = 0.19f;
+        float[][] nozzles = { { -d, -d }, { d, -d }, { -d, d }, { d, d } };
+        for (float[] nz : nozzles) {
             GL11.glPushMatrix();
-            GL11.glTranslatef((float) x, (float) y, (float) z);
-            GL11.glDisable(GL11.GL_TEXTURE_2D);
-            GL11.glDisable(GL11.GL_LIGHTING);
-            GL11.glEnable(GL11.GL_BLEND);
-            GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE); // aditivo: brilha
-            net.minecraft.client.renderer.Tessellator t =
-                net.minecraft.client.renderer.Tessellator.instance;
-            float r = 0.35f + pulse * 0.15f;
-            t.startDrawing(GL11.GL_TRIANGLE_FAN);
-            t.setColorRGBA_F(0.4f, 0.9f, 1.0f, 0.55f * pulse + 0.2f);
-            t.addVertex(0, -0.15, 0);
-            for (int i = 0; i <= 12; i++) {
-                double a = Math.PI * 2 * i / 12;
-                t.setColorRGBA_F(0.2f, 0.6f, 1.0f, 0f);
-                t.addVertex(Math.cos(a) * r, -0.05, Math.sin(a) * r);
-            }
-            t.draw();
-            GL11.glDisable(GL11.GL_BLEND);
-            GL11.glEnable(GL11.GL_LIGHTING);
-            GL11.glEnable(GL11.GL_TEXTURE_2D);
+            GL11.glTranslatef(nz[0], 0.0f, nz[1]);
+            TessellatorHelper.renderFlameCone(rad, len);
             GL11.glPopMatrix();
         }
+
+        if (phase == EntityNavRocket.PHASE_WARP) {
+            GL11.glDisable(GL11.GL_TEXTURE_2D);
+            Tessellator ts = Tessellator.instance;
+            ts.startDrawing(GL11.GL_TRIANGLE_FAN);
+            ts.setColorRGBA_F(0.25f, 0.90f, 1.0f, 0.45f * pulse);
+            ts.addVertex(0.0, 2.5, 0.0);
+            for (int i = 0; i <= 16; i++) {
+                double a = Math.PI * 2 * i / 16.0;
+                ts.setColorRGBA_F(0.10f, 0.60f, 1.0f, 0.0f);
+                ts.addVertex(Math.cos(a) * 1.15, 0.0, Math.sin(a) * 1.15);
+            }
+            ts.draw();
+            GL11.glEnable(GL11.GL_TEXTURE_2D);
+        }
+
+        GL11.glColor4f(1f, 1f, 1f, 1f);
+        GL11.glEnable(GL11.GL_CULL_FACE);
+        GL11.glDepthMask(true);
+        GL11.glEnable(GL11.GL_LIGHTING);
+        GL11.glDisable(GL11.GL_BLEND);
+        GL11.glPopMatrix();
     }
 
     @Override
     protected ResourceLocation getEntityTexture(Entity entity) {
-        return null; // texturas binds internas do modelo
+        return null;
     }
 }

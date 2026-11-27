@@ -2,46 +2,49 @@ package com.orbitalsunworks.block;
 
 import java.util.ArrayList;
 
+import net.minecraft.block.Block;
 import net.minecraft.block.BlockContainer;
 import net.minecraft.block.material.Material;
 import net.minecraft.client.renderer.texture.IIconRegister;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.IIcon;
 import net.minecraft.util.MovingObjectPosition;
+import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
 
+import com.orbitalsunworks.OSItems;
+import com.orbitalsunworks.OrbitalSunworks;
+import com.orbitalsunworks.Reference;
+import com.orbitalsunworks.handler.GuiHandler;
 import com.orbitalsunworks.rocket.TileNavRocket;
+import com.orbitalsunworks.world.orbit.OrbitDimensionManager;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
-/**
- * Bloco do FOGUETE DE NAVEGAÇÃO posicionado na plataforma (v0.7.0).
- *
- * Espelha o BlockRocket do T1: multiblock de 3 blocos de altura (meta 0 =
- * base com GUI, 1 = meio, 2 = topo), colisão real em cada parte, quebrar
- * QUALQUER parte remove a coluna e devolve o item (survival). Clicar
- * com o direito abre a GUI de seleção de satélite (o "mapa orbital").
- *
- * Diferenças pro T1:
- *  - não tem lançamento de satélite: a GUI lista os satélites DO JOGADOR
- *    e embarca na EntityNavRocket (viagem de navegação);
- *  - não tem slots de módulo (o módulo fica no satélite lá na órbita).
- */
 public class BlockNavRocket extends BlockContainer {
+
+    public static final int HEIGHT = 5;
 
     @SideOnly(Side.CLIENT)
     private IIcon iconBase;
 
-    /** Guarda anti-recursão: já estamos removendo a coluna. */
     private boolean removingColumn = false;
+
+    private final ThreadLocal<Boolean> manualDrop = new ThreadLocal<Boolean>() {
+        @Override
+        protected Boolean initialValue() {
+            return Boolean.FALSE;
+        }
+    };
 
     public BlockNavRocket() {
         super(Material.iron);
         this.setBlockName("blockNavRocket");
-        this.setCreativeTab(null); // só existe posicionado (item: navRocket)
+        this.setCreativeTab(null);
         this.setHardness(3.0f);
         this.setResistance(5.0f);
         this.setStepSound(soundTypeMetal);
@@ -51,11 +54,6 @@ public class BlockNavRocket extends BlockContainer {
     public TileEntity createNewTileEntity(World world, int meta) {
         return meta == 0 ? new TileNavRocket() : null;
     }
-
-    // ------------------------------------------------------------------
-    // Renderização: partes invisíveis (TESR desenha o modelo completo a
-    // partir da base) — mas com colisão de verdade.
-    // ------------------------------------------------------------------
 
     @Override
     public boolean renderAsNormalBlock() {
@@ -69,13 +67,13 @@ public class BlockNavRocket extends BlockContainer {
 
     @Override
     public int getRenderType() {
-        return -1; // TESR
+        return -1;
     }
 
     @Override
     @SideOnly(Side.CLIENT)
     public void registerBlockIcons(IIconRegister reg) {
-        this.iconBase = reg.registerIcon(com.orbitalsunworks.Reference.RESOURCE_PREFIX + "navRocket");
+        this.iconBase = reg.registerIcon(Reference.RESOURCE_PREFIX + "navRocket");
     }
 
     @Override
@@ -85,49 +83,49 @@ public class BlockNavRocket extends BlockContainer {
     }
 
     @Override
-    public void setBlockBoundsBasedOnState(net.minecraft.world.IBlockAccess world, int x, int y, int z) {
-        this.setBlockBounds(0.15f, 0.0f, 0.15f, 0.85f, 1.0f, 0.85f);
+    public void setBlockBoundsBasedOnState(IBlockAccess world, int x, int y, int z) {
+        this.setBlockBounds(0.12f, 0.0f, 0.12f, 0.88f, 1.0f, 0.88f);
     }
-
-    // ------------------------------------------------------------------
-    // Interação: clicar em QUALQUER parte abre o mapa orbital (GUI da base).
-    // ------------------------------------------------------------------
 
     @Override
     public boolean onBlockActivated(World world, int x, int y, int z,
             EntityPlayer player, int side, float hitX, float hitY, float hitZ) {
         int baseY = y - world.getBlockMetadata(x, y, z);
         if (!world.isRemote && world.getBlock(x, baseY, z) == this) {
-            player.openGui(com.orbitalsunworks.OrbitalSunworks.instance,
-                com.orbitalsunworks.handler.GuiHandler.ID_NAV_ROCKET, world, x, baseY, z);
+            if (OrbitDimensionManager.isOrbitWorld(world)) {
+                player.openGui(OrbitalSunworks.instance, GuiHandler.ID_NAV_RETURN, world, x, baseY, z);
+            } else {
+                player.openGui(OrbitalSunworks.instance, GuiHandler.ID_NAV_ROCKET, world, x, baseY, z);
+            }
         }
         return true;
     }
 
-    // ------------------------------------------------------------------
-    // Pick-block: devolve o ITEM do foguete de navegação.
-    // ------------------------------------------------------------------
-
     @Override
     @SideOnly(Side.CLIENT)
     public ItemStack getPickBlock(MovingObjectPosition target, World world, int x, int y, int z, EntityPlayer player) {
-        return new ItemStack(com.orbitalsunworks.OSItems.itemNavRocket);
+        return new ItemStack(OSItems.itemNavRocket);
     }
 
-    // ------------------------------------------------------------------
-    // Quebra: remove a COLUNA INTEIRA, dropa o item 1x na base (survival).
-    // ------------------------------------------------------------------
+    @Override
+    public boolean canEntityDestroy(IBlockAccess world, int x, int y, int z, Entity entity) {
+        if (world instanceof World && OrbitDimensionManager.isOrbitWorld((World) world)) {
+            return false;
+        }
+        return super.canEntityDestroy(world, x, y, z, entity);
+    }
 
     @Override
-    public boolean removedByPlayer(World world, net.minecraft.entity.player.EntityPlayer player,
-            int x, int y, int z, boolean willHarvest) {
+    public boolean removedByPlayer(World world, EntityPlayer player, int x, int y, int z, boolean willHarvest) {
+        if (OrbitDimensionManager.isOrbitWorld(world)) {
+            return false;
+        }
         if (this.removingColumn) {
             return super.removedByPlayer(world, player, x, y, z, willHarvest);
         }
         int meta = world.getBlockMetadata(x, y, z);
         int baseY = y - meta;
         boolean creative = player != null && player.capabilities.isCreativeMode;
-
         if (!world.isRemote && !creative) {
             this.manualDrop.set(Boolean.TRUE);
             try {
@@ -136,10 +134,9 @@ public class BlockNavRocket extends BlockContainer {
                 this.manualDrop.set(Boolean.FALSE);
             }
         }
-
         this.removingColumn = true;
         try {
-            for (int i = 2; i >= 0; i--) {
+            for (int i = HEIGHT - 1; i >= 0; i--) {
                 if (world.getBlock(x, baseY + i, z) == this) {
                     world.setBlockToAir(x, baseY + i, z);
                 }
@@ -154,24 +151,17 @@ public class BlockNavRocket extends BlockContainer {
     public ArrayList<ItemStack> getDrops(World world, int x, int y, int z, int metadata, int fortune) {
         ArrayList<ItemStack> drops = new ArrayList<ItemStack>();
         if (metadata == 0 && this.manualDrop.get() == Boolean.TRUE) {
-            drops.add(new ItemStack(com.orbitalsunworks.OSItems.itemNavRocket));
+            drops.add(new ItemStack(OSItems.itemNavRocket));
         }
         return drops;
     }
-
-    private final ThreadLocal<Boolean> manualDrop = new ThreadLocal<Boolean>() {
-        @Override
-        protected Boolean initialValue() {
-            return Boolean.FALSE;
-        }
-    };
 
     @Override
     public void onBlockHarvested(World world, int x, int y, int z, int meta, EntityPlayer player) {
     }
 
     @Override
-    public void breakBlock(World world, int x, int y, int z, net.minecraft.block.Block block, int meta) {
+    public void breakBlock(World world, int x, int y, int z, Block block, int meta) {
         super.breakBlock(world, x, y, z, block, meta);
     }
 

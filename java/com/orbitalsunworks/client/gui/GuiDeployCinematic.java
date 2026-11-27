@@ -4,6 +4,7 @@ import java.util.Random;
 import java.util.UUID;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.audio.PositionedSoundRecord;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.util.ResourceLocation;
@@ -12,50 +13,23 @@ import org.lwjgl.opengl.GL11;
 import org.lwjgl.util.glu.GLU;
 
 import com.orbitalsunworks.cinematic.CinematicTimeline;
+import com.orbitalsunworks.client.handler.OrbitDeployToast;
 import com.orbitalsunworks.client.render.ModelRocket;
 import com.orbitalsunworks.client.render.ModelSatellite;
+import com.orbitalsunworks.util.OSUtils;
 
+import cpw.mods.fml.common.eventhandler.SubscribeEvent;
+import cpw.mods.fml.common.gameevent.TickEvent;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
-/**
- * CINEMÁTICA DE LANÇAMENTO + IMPLANTAÇÃO (v0.9.0 — REFEITA "estilo NASA").
- *
- * O que o usuário exigiu (e como foi feito):
- *
- * 1. "O espaço aparece na minha câmera, com minha casa de fundo, grama,
- *    animais — INACEITÁVEL": o fundo agora é DESENHADO pela própria
- *    cena — caixa de espaço ESCURO (cinza quase preto) envolvente em
- *    TODAS as direções desenhada PRIMEIRO, cobrindo 100% da tela. O
- *    mundo do Minecraft não aparece em NENHUM pixel.
- *
- * 2. "O foguete não se parece com o que lançamos da Terra": a cinematic
- *    usa o MESMO ModelRocket do jogo (a nave que sobe da plataforma),
- *    em escala maior — a coifa do topo carrega o satélite.
- *
- * 3. Sequência (como as animações de missão da NASA), via
- *    CinematicTimeline (classe PURA testada no servidor):
- *      F0 ORBIT INSERTION — o estágio superior chega à órbita (inércia);
- *      F1 FAIRING — a coifa abre em 2 metades que GIRAM e DERIVAM
- *          para trás (inércia, sem explosão);
- *      F2 SEPARATION — molas empurram o satélite SUAVEMENTE para
- *          frente; o estágio acende o motor 1s (burn) e DERIVA para
- *          trás gradualmente (NUNCA some instantaneamente);
- *      F3 DRIFT — câmera troca de alvo: agora acompanha o SATÉLITE;
- *      F4 UNFOLD — as travas soltam e os painéis desdobram em SANFONA
- *          (6 segmentos por lado, um a um, em cascata — nunca
- *          instantâneo), a antena ergue o prato;
- *      F5 INSPECT — a câmera faz um arco lento ao redor do satélite
- *          implantado com a TERRA ao fundo e se afasta.
- *
- * 4. Movimentos suaves (easings), inércia (nada para de repente), SEM
- *    explosões exageradas — jatos RCS discretos na estabilização.
- */
 @SideOnly(Side.CLIENT)
 public class GuiDeployCinematic extends GuiScreen {
 
     private static final ResourceLocation TEX_EARTH = new ResourceLocation(
         "orbitalsunworks", "textures/environment/earth.png");
+    private static final ResourceLocation TEX_FLAME = new ResourceLocation(
+        "orbitalsunworks", "textures/models/rocket_flame.png");
 
     private final UUID satId;
     private final String satName;
@@ -65,23 +39,76 @@ public class GuiDeployCinematic extends GuiScreen {
 
     private int tick = 0;
     private boolean finished = false;
+    private boolean toastShown = false;
+
+    private boolean sfxSeco = false;
+    private boolean sfxFairing = false;
+    private boolean sfxSeparate = false;
+    private boolean sfxAntenna = false;
+    private boolean sfxLeftWing = false;
+    private boolean sfxRightWing = false;
+    private boolean sfxOperational = false;
 
     private final ModelRocket rocket = new ModelRocket();
     private final ModelSatellite satellite = new ModelSatellite();
 
-    /** Estrelas fixas (esfera unitária, direções estáveis). */
-    private static final int STARS = 320;
+    private static final int STARS = 360;
     private static final float[][] STAR_POS = new float[STARS][3];
-    /** Detritos da coifa (2 metades com posição/rotação da timeline). */
 
     static {
-        Random r = new Random(20260427);
+        Random r = new Random(20260427L);
         for (int i = 0; i < STARS; i++) {
-            double theta = r.nextDouble() * Math.PI * 2;
-            double phi = Math.acos(2 * r.nextDouble() - 1);
+            double theta = r.nextDouble() * Math.PI * 2.0;
+            double phi = Math.acos(2.0 * r.nextDouble() - 1.0);
             STAR_POS[i][0] = (float) (Math.sin(phi) * Math.cos(theta));
-            STAR_POS[i][1] = (float) (Math.cos(phi));
+            STAR_POS[i][1] = (float) Math.cos(phi);
             STAR_POS[i][2] = (float) (Math.sin(phi) * Math.sin(theta));
+        }
+    }
+
+    public static class TickOpener {
+        private static UUID pendingId;
+        private static String pendingName;
+        private static int pendingTier;
+        private static float pendingHealth;
+        private static boolean pendingShield;
+        private static boolean hasPending = false;
+
+        public static synchronized void scheduleOpen(UUID id, String name, int tier, float health, boolean shield) {
+            pendingId = id;
+            pendingName = name;
+            pendingTier = tier;
+            pendingHealth = health;
+            pendingShield = shield;
+            hasPending = true;
+        }
+
+        @SubscribeEvent
+        public void onClientTick(TickEvent.ClientTickEvent event) {
+            if (event.phase != TickEvent.Phase.END) {
+                return;
+            }
+            UUID id;
+            String name;
+            int tier;
+            float health;
+            boolean shield;
+            synchronized (TickOpener.class) {
+                if (!hasPending) {
+                    return;
+                }
+                Minecraft mc = Minecraft.getMinecraft();
+                if (mc == null || mc.theWorld == null || mc.thePlayer == null) {
+                    return;
+                }
+                id = pendingId;
+                name = pendingName;
+                tier = pendingTier;
+                health = pendingHealth;
+                shield = pendingShield;
+                hasPending = false;
+            }
+            GuiDeployCinematic.open(id, name, tier, health, shield);
         }
     }
 
@@ -93,7 +120,6 @@ public class GuiDeployCinematic extends GuiScreen {
         this.debrisShield = shield;
     }
 
-    /** Abre a cinematic no cliente (handler do MessageDeployCinematic). */
     public static void open(UUID id, String name, int tier, float health, boolean shield) {
         Minecraft.getMinecraft().displayGuiScreen(
             new GuiDeployCinematic(id, name, tier, health, shield));
@@ -103,37 +129,91 @@ public class GuiDeployCinematic extends GuiScreen {
     public void initGui() {
         super.initGui();
         this.buttonList.clear();
+        this.playSfx("mob.enderdragon.growl", 0.55f);
     }
 
     @Override
     public void updateScreen() {
         super.updateScreen();
-        if (!this.finished) {
-            this.tick++;
-            if (this.tick >= CinematicTimeline.DURATION) {
-                this.finished = true;
-                this.mc.displayGuiScreen(null);
-            }
+        if (this.finished) {
+            return;
+        }
+        this.tick++;
+        this.updateSounds(this.tick);
+        if (this.tick >= CinematicTimeline.DURATION) {
+            this.finished = true;
+            this.mc.displayGuiScreen(null);
         }
     }
 
-    // ------------------------------------------------------------------
-    // Render
-    // ------------------------------------------------------------------
+    private void updateSounds(int t) {
+        if (t < 68 && t % 7 == 0) {
+            this.playSfx("mob.enderdragon.growl", 0.48f);
+            this.playSfx("random.fizz", 0.60f);
+        }
+        if (!this.sfxSeco && t >= 72) {
+            this.sfxSeco = true;
+            this.playSfx("tile.piston.in", 0.75f);
+            this.playSfx("random.fizz", 0.90f);
+        }
+        if (!this.sfxFairing && t >= CinematicTimeline.F1_FAIRING) {
+            this.sfxFairing = true;
+            this.playSfx("fireworks.launch", 0.95f);
+            this.playSfx("tile.piston.out", 0.85f);
+        }
+        if (!this.sfxSeparate && t >= CinematicTimeline.F2_SEPARATION) {
+            this.sfxSeparate = true;
+            this.playSfx("tile.piston.out", 0.95f);
+            this.playSfx("note.pling", 1.15f);
+        }
+        if (t >= CinematicTimeline.F2_SEPARATION + 10 && t <= CinematicTimeline.F2_SEPARATION + 34 && t % 12 == 0) {
+            this.playSfx("random.fizz", 0.70f);
+        }
+        if (t >= CinematicTimeline.F3_DRIFT + 10 && t <= CinematicTimeline.F3_DRIFT + 45 && t % 16 == 0) {
+            this.playSfx("random.fizz", 1.25f);
+        }
+        if (!this.sfxAntenna && t >= CinematicTimeline.F4_UNFOLD + 2) {
+            this.sfxAntenna = true;
+            this.playSfx("tile.piston.out", 1.10f);
+            this.playSfx("random.click", 1.20f);
+        }
+        if (!this.sfxLeftWing && t >= CinematicTimeline.F4_UNFOLD + 12) {
+            this.sfxLeftWing = true;
+            this.playSfx("tile.piston.out", 0.90f);
+        }
+        if (!this.sfxRightWing && t >= CinematicTimeline.F4_UNFOLD + 24) {
+            this.sfxRightWing = true;
+            this.playSfx("tile.piston.out", 0.95f);
+        }
+        if (t >= CinematicTimeline.F4_UNFOLD + 28 && t <= CinematicTimeline.F4_UNFOLD + 78 && t % 10 == 0) {
+            this.playSfx("random.click", 1.15f);
+        }
+        if (!this.sfxOperational && t >= CinematicTimeline.F5_INSPECT + 8) {
+            this.sfxOperational = true;
+            this.playSfx("random.levelup", 0.90f);
+        }
+    }
+
+    private void playSfx(String name, float pitch) {
+        if (this.mc != null && this.mc.getSoundHandler() != null) {
+            this.mc.getSoundHandler().playSound(
+                PositionedSoundRecord.func_147674_a(new ResourceLocation(name), pitch));
+        }
+    }
 
     @Override
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
         float p = this.tick + partialTicks;
         int w = this.width;
         int h = this.height;
-        Tessellator t = Tessellator.instance;
 
-        // ================= CENA 3D (perspectiva) =================
+        GL11.glClear(GL11.GL_DEPTH_BUFFER_BIT);
+
         GL11.glMatrixMode(GL11.GL_PROJECTION);
         GL11.glPushMatrix();
         GL11.glLoadIdentity();
-        float aspect = (float) w / (float) h;
-        GLU.gluPerspective(58f, aspect, 0.1f, 500f);
+        float aspect = Math.max(0.1f, (float) w / (float) Math.max(1, h));
+        GLU.gluPerspective(56f, aspect, 0.1f, 500f);
         GL11.glMatrixMode(GL11.GL_MODELVIEW);
         GL11.glPushMatrix();
         GL11.glLoadIdentity();
@@ -142,91 +222,119 @@ public class GuiDeployCinematic extends GuiScreen {
         GL11.glDepthMask(true);
         GL11.glDisable(GL11.GL_FOG);
         GL11.glDisable(GL11.GL_ALPHA_TEST);
+        GL11.glDisable(GL11.GL_LIGHTING);
 
-        // ============ 1. O ESPAÇO (desenhado PRIMEIRO, cobre TUDO) ============
-        // O pedido: "lugar escuro, tipo um cinza escuro quase preto,
-        // igual ao espaço mesmo". Caixa envolvente + fundo + estrelas
-        // + Terra — o mundo do jogo NÃO aparece em pixel nenhum.
-        this.drawSpace(p, w, h);
+        this.drawSpace(p);
 
-        // ============ 2. CÂMERA ============
-        // O alvo desliza do "conjunto" (foguete+satélite) para o
-        // satélite sozinho (a troca de assunto da missão).
         float focusSat = CinematicTimeline.cameraFocusSatellite(p);
         float satDist = CinematicTimeline.satelliteDistance(p);
         float stageRecede = CinematicTimeline.stageRecede(p);
+        float mainBurn = CinematicTimeline.mainBurn(p);
+        float nozzleHeat = CinematicTimeline.nozzleHeat(p);
 
-        // Alvo: posição do SATÉLITE no eixo +Z (ele é empurrado pra frente).
-        float targetZ = 1.0f + satDist * 0.85f;
-        float targetY = 0.9f;
-        // A câmera segue a mistura conjunto->satélite.
-        float lookZ = targetZ * focusSat;
-        float lookY = targetY + (1f - focusSat) * 0.15f;
+        float rocketScale = 0.85f;
+        float rocketPitch = 82f;
+        float axisZ = (float) Math.sin(Math.toRadians(rocketPitch));
+        float axisY = (float) Math.cos(Math.toRadians(rocketPitch));
+
+        // Base do adaptador onde o satélite fica alojado dentro da coifa.
+        float adapterOffset = ModelRocket.PAYLOAD_ADAPTER_Y * rocketScale;
+        float satStartZ = -1.6f + adapterOffset * axisZ;
+        float satStartY = adapterOffset * axisY;
+
+        float satZ = satStartZ + satDist * 1.45f;
+        float satY = satStartY + satDist * 0.12f;
+
+        float lookZ = (1f - focusSat) * (satStartZ * 0.6f) + focusSat * satZ;
+        float lookY = (1f - focusSat) * (satStartY * 0.5f) + focusSat * (satY + 0.35f);
 
         float camDist = CinematicTimeline.cameraDistance(p);
         float camAng = CinematicTimeline.cameraOrbit(p);
         float camH = CinematicTimeline.cameraHeight(p);
-        float cx = (float) Math.cos(camAng) * camDist;
-        float cz = (float) Math.sin(camAng) * camDist + lookZ;
-        GLU.gluLookAt(cx, lookY + camH, cz, 0f, lookY, lookZ, 0f, 1f, 0f);
+        float camX = (float) Math.cos(camAng) * camDist;
+        float camZ = (float) Math.sin(camAng) * camDist + lookZ;
+        GLU.gluLookAt(camX, lookY + camH, camZ, 0f, lookY, lookZ, 0f, 1f, 0f);
 
-        // ============ 3. ATORES ============
-
-        // ---- 3a. As METADES DA COIFA (soltam na F1, derivam p/ trás) ----
-        float fairing = CinematicTimeline.fairingRelease(p);
-        float fairingDrift = CinematicTimeline.fairingDrift(p);
-        float fairingSpin = CinematicTimeline.fairingSpin(p);
-        if (fairing > 0.01f && fairing < 1f) {
-            this.drawFairingHalves(p, fairing, fairingDrift, fairingSpin);
+        // Vibração sutil durante a queima hipersônica inicial + linhas de velocidade orbital.
+        if (mainBurn > 0.01f) {
+            this.drawSpeedStreaks(p, mainBurn);
         }
 
-        // ---- 3b. O SATÉLITE (sai do topo do estágio nas molas) ----
-        // Posição: no TOPO do estágio (0, ~1.6, -0.35) e empurrado +Z.
-        float unfold = CinematicTimeline.unfold(p);
-        float spin = CinematicTimeline.satelliteSpin(p);
-        GL11.glPushMatrix();
-        float satScale = 0.80f;
-        GL11.glTranslatef(0f, targetY - 0.45f, -0.35f + targetZ * 1.0f);
-        GL11.glScalef(satScale, satScale, satScale);
-        // O modelo tem base em y=0; centra o volume no ponto de translação.
-        GL11.glTranslatef(0f, -0.55f, 0f);
-        this.satellite.renderAll(unfold, spin, p);
-        GL11.glPopMatrix();
-
-        // Jatos RCS discretos na estabilização (pós-separação).
-        if (p > CinematicTimeline.F2_SEPARATION + 30f
-            && p < CinematicTimeline.F3_DRIFT + 25f) {
-            this.rcsPuff(targetZ, targetY, p);
-        }
-
-        // ---- 3c. O ESTÁGIO SUPERIOR (recua GRADUALMENTE, não some) ----
-        float stageFade = 1f - CinematicTimeline.easeOut(
-            (p - (CinematicTimeline.F5_INSPECT + 20f)) / 60f);
+        // ---- 1. Foguete Tier 1 (sem coifa, corpo principal + chama) ----
+        float stageFade = 1f - CinematicTimeline.easeOut((p - (CinematicTimeline.F4_UNFOLD + 10f)) / 70f);
         if (stageFade > 0.01f) {
+            float vib = mainBurn * 0.025f;
+            float vx = (float) Math.sin(p * 2.3f) * vib;
+            float vy = (float) Math.cos(p * 2.9f) * vib;
+
             GL11.glPushMatrix();
-            // Recua em -Z (trajetória própria) e desce um pouco (o
-            // estágio segue sua vida num plano levemente diferente).
-            GL11.glTranslatef(0f, 0.35f - stageRecede * 0.12f,
-                -0.35f - stageRecede * 1.15f);
-            // Atitude: gira devagar (inércia de rotação do estágio).
-            GL11.glRotatef(4f + p * 0.10f, 0f, 1f, 0.02f);
-            // O MESMO foguete do jogo (ModelRocket), em pé (base em y=0).
-            GL11.glScalef(1.35f, 1.35f, 1.35f);
+            GL11.glTranslatef(vx, vy - stageRecede * 0.55f, -1.6f - stageRecede * 2.4f);
+            GL11.glRotatef(rocketPitch + stageRecede * 7.5f, 1f, 0f, 0f);
+            GL11.glRotatef(stageRecede * 5.0f, 0f, 0f, 1f);
+            GL11.glScalef(rocketScale, rocketScale, rocketScale);
+
+            GL11.glEnable(GL11.GL_BLEND);
+            GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
             GL11.glColor4f(1f, 1f, 1f, stageFade);
-            this.rocket.renderAll();
+            this.rocket.renderBodyWithoutFairing(nozzleHeat);
+
+            // Coifa fechada antes da F1; metades separando a partir da F1.
+            float fairing = CinematicTimeline.fairingRelease(p);
+            float fairingDrift = CinematicTimeline.fairingDrift(p);
+            float fairingSpin = CinematicTimeline.fairingSpin(p);
+            if (fairing < 0.99f) {
+                for (int side = -1; side <= 1; side += 2) {
+                    GL11.glPushMatrix();
+                    if (fairing > 0.001f) {
+                        GL11.glTranslatef(
+                            side * (fairing * 0.55f + fairingDrift * 0.25f),
+                            -fairingDrift * 0.95f,
+                            fairing * 0.12f);
+                        GL11.glTranslatef(0f, ModelRocket.PAYLOAD_ADAPTER_Y + 0.6f, 0f);
+                        GL11.glRotatef(side * fairingSpin * 0.85f, 0.2f, 0.35f, 0.9f);
+                        GL11.glTranslatef(0f, -(ModelRocket.PAYLOAD_ADAPTER_Y + 0.6f), 0f);
+                    }
+                    this.rocket.renderFairingHalf(side);
+                    GL11.glPopMatrix();
+                }
+            }
+
+            // Chama principal (Fase 0) ou burn de afastamento (Fase 2).
+            float retroBurn = CinematicTimeline.stageBurn(p);
+            float totalBurn = Math.max(mainBurn, retroBurn * 0.55f);
+            if (totalBurn > 0.01f) {
+                this.renderRocketPlume(p, totalBurn, mainBurn > 0.05f);
+            }
+
             GL11.glColor4f(1f, 1f, 1f, 1f);
-            // Chama do burn de afastamento (1s depois da separação).
-            float burn = CinematicTimeline.stageBurn(p);
-            if (burn > 0.01f) {
-                this.engineBurn(burn);
+            GL11.glDisable(GL11.GL_BLEND);
+            GL11.glPopMatrix();
+        }
+
+        // ---- 2. Satélite Metálico (desacoplando da coifa -> abertura -> órbita) ----
+        if (p >= CinematicTimeline.F1_FAIRING - 2f) {
+            float unfold = CinematicTimeline.unfold(p);
+            float spin = CinematicTimeline.satelliteSpin(p);
+            float satPitch = rocketPitch * (1f - focusSat);
+            float satScale = 0.62f + 0.20f * focusSat;
+
+            GL11.glPushMatrix();
+            GL11.glTranslatef(0f, satY, satZ);
+            GL11.glRotatef(satPitch, 1f, 0f, 0f);
+            GL11.glScalef(satScale, satScale, satScale);
+            this.satellite.renderAll(unfold, spin, p);
+
+            if (p >= CinematicTimeline.F3_DRIFT && p <= CinematicTimeline.F4_UNFOLD + 15f) {
+                this.rcsPuff(p);
+            }
+            if (p >= CinematicTimeline.F5_INSPECT) {
+                this.renderOrbitBeacon(p);
             }
             GL11.glPopMatrix();
         }
 
         GL11.glDisable(GL11.GL_BLEND);
         GL11.glEnable(GL11.GL_ALPHA_TEST);
-
-        // ================= FIM DA CENA 3D =================
         GL11.glDisable(GL11.GL_DEPTH_TEST);
         GL11.glMatrixMode(GL11.GL_PROJECTION);
         GL11.glPopMatrix();
@@ -234,47 +342,34 @@ public class GuiDeployCinematic extends GuiScreen {
         GL11.glPopMatrix();
         GL11.glColor4f(1, 1, 1, 1);
 
-        // ================= HUD (2D, por cima) =================
-        // vinheta de cinema.
-        this.drawGradientRect(0, 0, w, h / 7, 0xC0000000, 0x00000000);
-        this.drawGradientRect(0, h - h / 7, w, h, 0x00000000, 0xC0000000);
+        // ---- HUD Cinematográfico ----
+        this.drawGradientRect(0, 0, w, h / 8, 0xCC000000, 0x00000000);
+        this.drawGradientRect(0, h - h / 8, w, h, 0x00000000, 0xCC000000);
 
-        // fade-in / fade-out.
-        if (p < 30f) {
-            this.fullScreenFade(1f - CinematicTimeline.clamp01(p / 30f));
+        if (p < 18f) {
+            this.fullScreenFade(1f - CinematicTimeline.clamp01(p / 18f));
         }
         if (p > CinematicTimeline.DURATION - 25f) {
-            this.fullScreenFade(CinematicTimeline.clamp01(
-                (p - (CinematicTimeline.DURATION - 25f)) / 25f));
+            this.fullScreenFade(CinematicTimeline.clamp01((p - (CinematicTimeline.DURATION - 25f)) / 25f));
         }
 
-        // Legendas de missão (aparecem na hora certa, estilo NASA).
         this.missionCaption(p, w, h);
 
-        if (p > 15f && p < CinematicTimeline.DURATION - 15f) {
-            String skip = "ESC para pular";
-            this.fontRendererObj.drawString(skip,
-                w - this.fontRendererObj.getStringWidth(skip) - 8, 8, 0x6A7888);
-        }
+        String skip = "[ESC] Pular cinem\u00e1tica";
+        int sw = this.fontRendererObj.getStringWidth(skip);
+        drawRect(w - sw - 14, 6, w - 6, 20, 0x900B111A);
+        this.fontRendererObj.drawStringWithShadow(skip, w - sw - 10, 9, 0xB8D8EE);
 
         super.drawScreen(mouseX, mouseY, partialTicks);
     }
 
-    // ------------------------------------------------------------------
-    // O espaço: fundo escuro + estrelas + Terra (cobre a tela TODA)
-    // ------------------------------------------------------------------
-
-    private void drawSpace(float p, int w, int h) {
+    private void drawSpace(float p) {
         Tessellator t = Tessellator.instance;
         GL11.glDisable(GL11.GL_TEXTURE_2D);
 
-        // ---- Fundo "cinza escuro quase preto" (o espaço do pedido) ----
-        // Desenhado SEM depender da matriz de câmera (quad envolvente
-        // gigante ao redor da origem — a câmera está sempre dentro).
-        GL11.glPushMatrix();
         float s = 260f;
         GL11.glBegin(GL11.GL_QUADS);
-        GL11.glColor3f(0.035f, 0.038f, 0.048f); // cinza-azulado quase preto
+        GL11.glColor3f(0.025f, 0.030f, 0.042f);
         GL11.glVertex3f(-s, -s, -s); GL11.glVertex3f(s, -s, -s);
         GL11.glVertex3f(s, s, -s); GL11.glVertex3f(-s, s, -s);
         GL11.glVertex3f(-s, -s, s); GL11.glVertex3f(s, -s, s);
@@ -288,218 +383,182 @@ public class GuiDeployCinematic extends GuiScreen {
         GL11.glVertex3f(-s, s, -s); GL11.glVertex3f(s, s, -s);
         GL11.glVertex3f(s, s, s); GL11.glVertex3f(-s, s, s);
         GL11.glEnd();
-        GL11.glPopMatrix();
 
-        // ---- Estrelas (pontos com brilho individual pulsando) ----
-        GL11.glPointSize(1.7f);
+        GL11.glPointSize(1.8f);
         GL11.glEnable(GL11.GL_POINT_SMOOTH);
         GL11.glEnable(GL11.GL_BLEND);
         GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE);
         t.startDrawing(GL11.GL_POINTS);
         for (int i = 0; i < STARS; i++) {
-            float tw = 0.45f + 0.55f * (0.5f + 0.5f
-                * (float) Math.sin(p * 0.045f + i * 1.7f));
-            t.setColorRGBA_F(tw, tw, tw, 1f);
-            t.addVertex(STAR_POS[i][0] * 240f, STAR_POS[i][1] * 240f, STAR_POS[i][2] * 240f);
+            float tw = 0.50f + 0.50f * (0.5f + 0.5f * (float) Math.sin(p * 0.04f + i * 1.7f));
+            t.setColorRGBA_F(tw, tw, Math.min(1f, tw * 1.06f), 1f);
+            t.addVertex(STAR_POS[i][0] * 235f, STAR_POS[i][1] * 235f, STAR_POS[i][2] * 235f);
         }
         t.draw();
         GL11.glDisable(GL11.GL_POINT_SMOOTH);
         GL11.glDisable(GL11.GL_BLEND);
 
-        // ---- A TERRA "abaixo" (disco gigante, textura própria) ----
+        // Terra limpa e perfeitamente redonda (72 segmentos, sem triângulos azuis na borda).
         GL11.glEnable(GL11.GL_TEXTURE_2D);
         this.mc.getTextureManager().bindTexture(TEX_EARTH);
         GL11.glColor4f(1f, 1f, 1f, 1f);
-        float er = 120f, ey = -128f;
-        int segs = 40;
-        GL11.glPushMatrix();
-        // Disco no plano y=ey (visto de baixo: câmera está acima).
+        float er = 148f;
+        float ey = -118f;
+        int segs = 72;
         t.startDrawing(GL11.GL_TRIANGLE_FAN);
         t.setColorOpaque_F(1f, 1f, 1f);
         t.addVertexWithUV(0f, ey, 0f, 0.5f, 0.5f);
         for (int i = 0; i <= segs; i++) {
-            double a = Math.PI * 2 * i / segs + p * 0.0012f; // giro lento
+            double a = Math.PI * 2.0 * i / segs + p * 0.0010f;
             t.addVertexWithUV((float) Math.cos(a) * er, ey, (float) Math.sin(a) * er,
                 0.5f + (float) Math.cos(a) * 0.5f, 0.5f + (float) Math.sin(a) * 0.5f);
         }
         t.draw();
-
-        // Limbo atmosférico (anel azul que "vaza" da borda do disco).
-        GL11.glDisable(GL11.GL_TEXTURE_2D);
-        GL11.glEnable(GL11.GL_BLEND);
-        GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE);
-        t.startDrawing(GL11.GL_TRIANGLE_STRIP);
-        for (int i = 0; i <= segs; i++) {
-            double a = Math.PI * 2 * i / segs;
-            float ca = (float) Math.cos(a), sa = (float) Math.sin(a);
-            t.setColorRGBA_F(0.30f, 0.55f, 1f, 0.55f);
-            t.addVertex(ca * er, ey - 0.5f, sa * er);
-            t.setColorRGBA_F(0.25f, 0.45f, 1f, 0f);
-            t.addVertex(ca * (er + 20f), ey - 0.5f, sa * (er + 20f));
-        }
-        t.draw();
-        GL11.glDisable(GL11.GL_BLEND);
-        GL11.glPopMatrix();
         GL11.glColor4f(1f, 1f, 1f, 1f);
     }
 
-    // ------------------------------------------------------------------
-    // As metades da coifa (derivam para trás girando)
-    // ------------------------------------------------------------------
-
-    private void drawFairingHalves(float p, float release, float drift, float spin) {
-        Tessellator t = Tessellator.instance;
-        // Cada metade: um "concha" longa (2 quads curvos + borda) que
-        // parte do TOPO do foguete (y ~1.6..2.9) e deriva em -Z.
-        for (int side = -1; side <= 1; side += 2) {
-            GL11.glPushMatrix();
-            // Ponto de origem: topo do estágio.
-            GL11.glTranslatef(0f, 2.0f, -0.35f);
-            // Afastamento lateral (molas pirotecnicas) + deriva p/ trás.
-            GL11.glTranslatef(side * release * 1.6f, release * 0.45f, -drift);
-            // Gira (tumble lento de detrito inerte).
-            GL11.glRotatef(spin, 0.3f, 0.85f, 0.45f);
-            // A concha (semi-cilindro fino, cinza claro).
-            GL11.glDisable(GL11.GL_TEXTURE_2D);
-            int segs = 5;
-            float r = 0.55f, len = 1.3f;
-            double a0 = side < 0 ? Math.PI / 2 : -Math.PI / 2;
-            double a1 = side < 0 ? Math.PI * 1.5 : Math.PI / 2;
-            t.startDrawingQuads();
-            for (int i = 0; i < segs; i++) {
-                double b0 = a0 + (a1 - a0) * i / segs;
-                double b1 = a0 + (a1 - a0) * (i + 1) / segs;
-                float am = (float) ((b0 + b1) / 2);
-                float f = 0.55f + 0.45f * Math.max(0f,
-                    (float) Math.cos(am) * 0.42f + (float) Math.sin(am) * 0.38f);
-                t.setColorOpaque_F(f, f, f * 1.03f);
-                t.addVertex((float) Math.cos(b0) * r, 0f, (float) Math.sin(b0) * r);
-                t.addVertex((float) Math.cos(b1) * r, 0f, (float) Math.sin(b1) * r);
-                t.addVertex((float) Math.cos(b1) * r, len, (float) Math.sin(b1) * r);
-                t.addVertex((float) Math.cos(b0) * r, len, (float) Math.sin(b0) * r);
-            }
-            t.draw();
-            GL11.glPopMatrix();
-        }
-    }
-
-    // ------------------------------------------------------------------
-    // Efeitos discretos
-    // ------------------------------------------------------------------
-
-    /** Chama do burn de afastamento do estágio (cone aditivo). */
-    private void engineBurn(float strength) {
-        Tessellator t = Tessellator.instance;
-        GL11.glDisable(GL11.GL_TEXTURE_2D);
-        GL11.glEnable(GL11.GL_BLEND);
-        GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE); // aditivo
-        // Núcleo branco-azulado + saia laranja (flicker sutil).
-        float flick = 0.85f + 0.15f * (float) Math.sin(tick * 1.7f);
-        float len = (0.85f + 0.55f * strength) * flick;
-        for (int layer = 0; layer < 2; layer++) {
-            float r0 = layer == 0 ? 0.10f : 0.16f;
-            float r1 = layer == 0 ? 0.03f : 0.09f;
-            float a = layer == 0 ? 0.9f : 0.45f;
-            t.startDrawing(GL11.GL_TRIANGLE_FAN);
-            if (layer == 0) {
-                t.setColorRGBA_F(0.85f, 0.92f, 1.0f, a * strength);
-            } else {
-                t.setColorRGBA_F(1.0f, 0.62f, 0.25f, a * strength);
-            }
-            t.addVertex(0f, -len, 0f);
-            for (int i = 0; i <= 10; i++) {
-                double ang = Math.PI * 2 * i / 10;
-                if (layer == 0) {
-                    t.setColorRGBA_F(0.85f, 0.92f, 1.0f, 0f);
-                } else {
-                    t.setColorRGBA_F(1.0f, 0.62f, 0.25f, 0f);
-                }
-                t.addVertex((float) Math.cos(ang) * r1, 0.02f, (float) Math.sin(ang) * r1);
-                // (usa o raio pequeno no topo do bocal)
-            }
-            t.draw();
-            // saia do jato (cilindro cônico)
-            t.startDrawingQuads();
-            for (int i = 0; i < 10; i++) {
-                double a0 = Math.PI * 2 * i / 10;
-                double a1 = Math.PI * 2 * (i + 1) / 10;
-                if (layer == 0) {
-                    t.setColorRGBA_F(0.85f, 0.92f, 1.0f, a * strength * 0.8f);
-                } else {
-                    t.setColorRGBA_F(1.0f, 0.62f, 0.25f, a * strength * 0.8f);
-                }
-                t.addVertex((float) Math.cos(a0) * r0, 0.02f, (float) Math.sin(a0) * r0);
-                t.addVertex((float) Math.cos(a1) * r0, 0.02f, (float) Math.sin(a1) * r0);
-                t.addVertex((float) Math.cos(a1) * r1, -len, (float) Math.sin(a1) * r1);
-                t.addVertex((float) Math.cos(a0) * r1, -len, (float) Math.sin(a0) * r1);
-            }
-            t.draw();
-        }
-        GL11.glDisable(GL11.GL_BLEND);
-    }
-
-    /** Sopros RCS curtos (gás branco) no corpo do satélite. */
-    private void rcsPuff(float satZ, float satY, float p) {
+    private void drawSpeedStreaks(float p, float burn) {
         Tessellator t = Tessellator.instance;
         GL11.glDisable(GL11.GL_TEXTURE_2D);
         GL11.glEnable(GL11.GL_BLEND);
         GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE);
-        // 2 sopros alternados (pulso a cada 30 ticks).
-        float pulse = (p % 30f) < 12f ? 1f : 0f;
+        GL11.glLineWidth(1.4f);
+        t.startDrawing(GL11.GL_LINES);
+        Random r = new Random(9911L);
+        for (int i = 0; i < 42; i++) {
+            float rx = (r.nextFloat() - 0.5f) * 16f;
+            float ry = (r.nextFloat() - 0.5f) * 12f;
+            if (Math.abs(rx) < 1.6f && Math.abs(ry) < 1.6f) {
+                rx += 2.2f;
+            }
+            float phase = (r.nextFloat() * 24f + p * 0.95f) % 24f;
+            float zHead = 10f - phase;
+            float len = 1.6f + 1.4f * burn;
+            t.setColorRGBA_F(0.70f, 0.88f, 1.0f, 0.42f * burn);
+            t.addVertex(rx, ry, zHead);
+            t.setColorRGBA_F(0.40f, 0.70f, 1.0f, 0.0f);
+            t.addVertex(rx, ry, zHead - len);
+        }
+        t.draw();
+        GL11.glDisable(GL11.GL_BLEND);
+        GL11.glEnable(GL11.GL_TEXTURE_2D);
+    }
+
+    private void renderRocketPlume(float p, float strength, boolean supersonic) {
+        Tessellator t = Tessellator.instance;
+        this.mc.getTextureManager().bindTexture(TEX_FLAME);
+        GL11.glEnable(GL11.GL_BLEND);
+        GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE);
+        GL11.glDepthMask(false);
+        GL11.glDisable(GL11.GL_CULL_FACE);
+
+        float flick = 0.88f + 0.12f * (float) Math.sin(p * 1.9f);
+        float len = (supersonic ? 3.2f : 1.4f) * strength * flick;
+        float rad = supersonic ? 0.36f : 0.22f;
+
+        GL11.glColor4f(1.0f, 0.78f, 0.45f, 0.92f * strength);
+        t.startDrawing(GL11.GL_TRIANGLES);
+        for (int i = 0; i < 14; i++) {
+            double a0 = Math.PI * 2 * i / 14.0;
+            double a1 = Math.PI * 2 * (i + 1) / 14.0;
+            t.addVertexWithUV(Math.cos(a0) * rad, 0.0, Math.sin(a0) * rad, i / 14.0, 1.0);
+            t.addVertexWithUV(Math.cos(a1) * rad, 0.0, Math.sin(a1) * rad, (i + 1) / 14.0, 1.0);
+            t.addVertexWithUV(0.0, -len, 0.0, (i + 0.5) / 14.0, 0.0);
+        }
+        t.draw();
+
+        GL11.glDisable(GL11.GL_TEXTURE_2D);
+        GL11.glColor4f(0.82f, 0.94f, 1.0f, 0.95f * strength);
+        float coreRad = rad * 0.55f;
+        float coreLen = len * 0.62f;
+        t.startDrawing(GL11.GL_TRIANGLES);
+        for (int i = 0; i < 12; i++) {
+            double a0 = Math.PI * 2 * i / 12.0;
+            double a1 = Math.PI * 2 * (i + 1) / 12.0;
+            t.addVertex(Math.cos(a0) * coreRad, -0.02, Math.sin(a0) * coreRad);
+            t.addVertex(Math.cos(a1) * coreRad, -0.02, Math.sin(a1) * coreRad);
+            t.addVertex(0.0, -coreLen, 0.0);
+        }
+        t.draw();
+
+        GL11.glEnable(GL11.GL_TEXTURE_2D);
+        GL11.glEnable(GL11.GL_CULL_FACE);
+        GL11.glDepthMask(true);
+        GL11.glColor4f(1f, 1f, 1f, 1f);
+    }
+
+    private void rcsPuff(float p) {
+        float pulse = (p % 26f) < 10f ? 1f : 0f;
         if (pulse <= 0f) {
-            GL11.glDisable(GL11.GL_BLEND);
             return;
         }
-        for (int i = 0; i < 2; i++) {
-            float side = i == 0 ? -1f : 1f;
-            float fade = pulse * (1f - (p % 12f) / 12f);
+        float fade = pulse * (1f - (p % 10f) / 10f);
+        Tessellator t = Tessellator.instance;
+        GL11.glDisable(GL11.GL_TEXTURE_2D);
+        GL11.glEnable(GL11.GL_BLEND);
+        GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE);
+        for (int i = -1; i <= 1; i += 2) {
             t.startDrawingQuads();
-            t.setColorRGBA_F(0.9f, 0.95f, 1f, 0.5f * fade);
-            t.addVertex(side * 0.5f, satY, satZ);
-            t.addVertex(side * 0.5f, satY + 0.14f, satZ);
-            t.addVertex(side * (0.9f + 0.3f * fade), satY + 0.14f, satZ);
-            t.addVertex(side * (0.9f + 0.3f * fade), satY, satZ);
+            t.setColorRGBA_F(0.88f, 0.95f, 1.0f, 0.55f * fade);
+            t.addVertex(i * 0.48, 0.85, -0.06);
+            t.addVertex(i * 0.48, 0.97, 0.06);
+            t.addVertex(i * (0.95 + 0.35 * fade), 0.97, 0.06);
+            t.addVertex(i * (0.95 + 0.35 * fade), 0.85, -0.06);
             t.draw();
         }
         GL11.glDisable(GL11.GL_BLEND);
+        GL11.glEnable(GL11.GL_TEXTURE_2D);
     }
 
-    // ------------------------------------------------------------------
-    // HUD
-    // ------------------------------------------------------------------
+    private void renderOrbitBeacon(float p) {
+        float blink = (p % 30f) < 7f ? 1.0f : 0.2f;
+        Tessellator t = Tessellator.instance;
+        GL11.glDisable(GL11.GL_TEXTURE_2D);
+        GL11.glEnable(GL11.GL_BLEND);
+        GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE);
+        t.startDrawingQuads();
+        t.setColorRGBA_F(0.25f, 0.95f, 1.0f, blink);
+        t.addVertex(-0.04, 1.66, -0.04);
+        t.addVertex(-0.04, 1.66, 0.04);
+        t.addVertex(0.04, 1.66, 0.04);
+        t.addVertex(0.04, 1.66, -0.04);
+        t.draw();
+        GL11.glDisable(GL11.GL_BLEND);
+        GL11.glEnable(GL11.GL_TEXTURE_2D);
+    }
 
-    /** Legendas de missão no estilo dos vídeos da NASA (por fase). */
     private void missionCaption(float p, int w, int h) {
         String caption = null;
-        int color = 0x9FB4C7;
-        if (p > 12f && p < 62f) {
-            caption = "Inserção orbital confirmada";
+        int color = 0xC4DAE8;
+        if (p > 8f && p < 70f) {
+            caption = "Propuls\u00e3o orbital em velocidade hipers\u00f4nica";
             color = 0x55E0FF;
-        } else if (p > CinematicTimeline.F1_FAIRING + 4f && p < CinematicTimeline.F1_FAIRING + 50f) {
-            caption = "Liberação da coifa";
-        } else if (p > CinematicTimeline.F2_SEPARATION + 4f && p < CinematicTimeline.F2_SEPARATION + 55f) {
-            caption = "Separação — molas de impulso acionadas";
-        } else if (p > CinematicTimeline.F3_DRIFT + 4f && p < CinematicTimeline.F3_DRIFT + 55f) {
-            caption = "Estabilizando atitude";
-        } else if (p > CinematicTimeline.F4_UNFOLD + 4f && p < CinematicTimeline.F4_UNFOLD + 90f) {
-            caption = "Implantação dos painéis solares";
+        } else if (p >= 70f && p < CinematicTimeline.F1_FAIRING) {
+            caption = "SECO \u2014 Corte dos motores principais";
             color = 0xFFD970;
-        } else if (p > CinematicTimeline.F5_INSPECT + 8f) {
-            caption = this.satName + " — Tier " + this.satTier + " operacional";
+        } else if (p >= CinematicTimeline.F1_FAIRING && p < CinematicTimeline.F2_SEPARATION) {
+            caption = "Alijamento da coifa protetora";
+        } else if (p >= CinematicTimeline.F2_SEPARATION && p < CinematicTimeline.F3_DRIFT) {
+            caption = "Desacoplamento do sat\u00e9lite e descarte do est\u00e1gio";
+        } else if (p >= CinematicTimeline.F3_DRIFT && p < CinematicTimeline.F4_UNFOLD) {
+            caption = "Estabiliza\u00e7\u00e3o de atitude por jatos RCS";
+        } else if (p >= CinematicTimeline.F4_UNFOLD && p < CinematicTimeline.F5_INSPECT) {
+            caption = "Implantando antenas e pain\u00e9is solares";
+            color = 0xFFD970;
+        } else if (p >= CinematicTimeline.F5_INSPECT) {
+            caption = this.satName + " \u2014 Tier " + this.satTier + " em \u00f3rbita operacional";
             color = 0x7CFC00;
         }
+
         if (caption != null) {
-            this.drawCenteredString(this.fontRendererObj, caption, w / 2, h - 56, color);
+            this.drawCenteredString(this.fontRendererObj, caption, w / 2, h - 54, color);
         }
-        // Geração inicial (aparece no fim, com o satélite pronto).
-        if (p > CinematicTimeline.F5_INSPECT + 25f) {
-            String gen = com.orbitalsunworks.util.OSUtils
-                .formatRF(this.currentGenerationRFt()) + "/t de geração inicial";
-            this.drawCenteredString(this.fontRendererObj, gen, w / 2, h - 44, 0x7CFC00);
+        if (p >= CinematicTimeline.F5_INSPECT + 12f) {
+            String gen = OSUtils.formatRF(this.currentGenerationRFt()) + "/t de gera\u00e7\u00e3o inicial";
+            this.drawCenteredString(this.fontRendererObj, gen, w / 2, h - 40, 0x7CFC00);
         }
     }
 
-    /** Quad preto com alpha pela tela toda (fade). */
     private void fullScreenFade(float alpha) {
         Tessellator t = Tessellator.instance;
         GL11.glEnable(GL11.GL_BLEND);
@@ -516,25 +575,17 @@ public class GuiDeployCinematic extends GuiScreen {
         GL11.glColor4f(1, 1, 1, 1);
     }
 
-    /** Geração atual do satélite (mesma fórmula do manager). */
     private long currentGenerationRFt() {
         long base = 1000000L;
-        float factor;
-        if (this.satHealth >= 0.2f) {
-            factor = 0.5f + (this.satHealth - 0.2f) * (0.5f / 0.8f);
-        } else {
-            factor = 0.5f;
-        }
+        float factor = this.satHealth >= 0.2f
+            ? 0.5f + (this.satHealth - 0.2f) * (0.5f / 0.8f)
+            : 0.5f;
         return (long) (base * factor);
     }
 
-    // ------------------------------------------------------------------
-    // Controles
-    // ------------------------------------------------------------------
-
     @Override
     protected void keyTyped(char c, int keyCode) {
-        if (keyCode == 1 || keyCode == 28 || keyCode == 57) { // ESC/ENTER/ESPAÇO
+        if (keyCode == 1 || (this.tick > 15 && (keyCode == 28 || keyCode == 57))) {
             this.finished = true;
             this.mc.displayGuiScreen(null);
         }
@@ -542,7 +593,7 @@ public class GuiDeployCinematic extends GuiScreen {
 
     @Override
     protected void mouseClicked(int mouseX, int mouseY, int button) {
-        if (this.tick > 40) { // não pular sem querer
+        if (this.tick > 45) {
             this.finished = true;
             this.mc.displayGuiScreen(null);
         }
@@ -550,12 +601,16 @@ public class GuiDeployCinematic extends GuiScreen {
 
     @Override
     public boolean doesGuiPauseGame() {
-        return false; // NUNCA pausar o servidor em multiplayer!
+        return false;
     }
 
     @Override
     public void onGuiClosed() {
         super.onGuiClosed();
         GL11.glColor4f(1, 1, 1, 1);
+        if (!this.toastShown) {
+            this.toastShown = true;
+            OrbitDeployToast.show(this.satName, this.satTier, this.satHealth);
+        }
     }
 }

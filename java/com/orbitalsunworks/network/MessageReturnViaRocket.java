@@ -3,41 +3,43 @@ package com.orbitalsunworks.network;
 import io.netty.buffer.ByteBuf;
 
 import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.tileentity.TileEntity;
+import net.minecraft.world.World;
 
 import com.orbitalsunworks.rocket.EntityNavRocket;
+import com.orbitalsunworks.rocket.TileNavRocket;
+import com.orbitalsunworks.util.OSUtils;
+import com.orbitalsunworks.world.orbit.OrbitDimensionManager;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
 import cpw.mods.fml.common.network.simpleimpl.MessageContext;
 
-/**
- * C->S: botão "VOLTAR À TERRA" da GUI da NAVE ESTACIONADA na órbita
- * (v0.8.0). Diferente do MessageReturnHome (que lê a casa do item),
- * este usa a PRÓPRIA entidade da nave (a casa gravada nela na viagem
- * de ida) e repõe o bloco do foguete na plataforma ao chegar.
- *
- * O servidor valida: jogador na órbita, entidade existe, é dele e está
- * estacionada. Teleporte DIRETO (sem animação — o usuário pediu assim).
- */
 public class MessageReturnViaRocket implements IMessage {
 
-    private int rocketEntityId;
+    private int x, y, z;
 
     public MessageReturnViaRocket() {
     }
 
-    public MessageReturnViaRocket(int rocketEntityId) {
-        this.rocketEntityId = rocketEntityId;
+    public MessageReturnViaRocket(int x, int y, int z) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
     }
 
     @Override
     public void fromBytes(ByteBuf buf) {
-        this.rocketEntityId = buf.readInt();
+        this.x = buf.readInt();
+        this.y = buf.readInt();
+        this.z = buf.readInt();
     }
 
     @Override
     public void toBytes(ByteBuf buf) {
-        buf.writeInt(this.rocketEntityId);
+        buf.writeInt(this.x);
+        buf.writeInt(this.y);
+        buf.writeInt(this.z);
     }
 
     public static class Handler implements IMessageHandler<MessageReturnViaRocket, IMessage> {
@@ -45,26 +47,24 @@ public class MessageReturnViaRocket implements IMessage {
         @Override
         public IMessage onMessage(MessageReturnViaRocket message, MessageContext ctx) {
             EntityPlayerMP player = ctx.getServerHandler().playerEntity;
-            if (!com.orbitalsunworks.world.orbit.OrbitDimensionManager
-                    .isOrbitWorld(player.worldObj)) {
-                return null; // só tem botão na órbita
-            }
-            // Acha a nave estacionada pela entity id (enviada pela GUI).
-            Object o = player.worldObj.getEntityByID(message.rocketEntityId);
-            if (!(o instanceof EntityNavRocket)) {
-                com.orbitalsunworks.util.OSUtils.sendChat(player,
-                    "\u00a7cNave n\u00e3o encontrada!");
+            World world = player.worldObj;
+            if (!OrbitDimensionManager.isOrbitWorld(world)) {
                 return null;
             }
-            EntityNavRocket rocket = (EntityNavRocket) o;
-            if (rocket.phaseOf() != EntityNavRocket.PHASE_PARKED
-                || rocket.getOwnerUUID() == null
-                || !rocket.getOwnerUUID().equals(player.getUniqueID())) {
-                com.orbitalsunworks.util.OSUtils.sendChat(player,
-                    "\u00a7cEsta nave n\u00e3o est\u00e1 estacionada pra voc\u00ea!");
+            TileEntity te = world.getTileEntity(message.x, message.y, message.z);
+            if (!(te instanceof TileNavRocket)) {
+                OSUtils.sendChat(player, "\u00a7cNave n\u00e3o encontrada!");
                 return null;
             }
-            EntityNavRocket.sendParkedHome(player, rocket);
+            TileNavRocket tile = (TileNavRocket) te;
+            if (player.getDistanceSq(message.x + 0.5, message.y + 0.5, message.z + 0.5) > 64) {
+                return null;
+            }
+            if (tile.ownerUUID != null && !tile.ownerUUID.equals(player.getUniqueID())) {
+                OSUtils.sendChat(player, "\u00a7cEsta nave n\u00e3o \u00e9 sua!");
+                return null;
+            }
+            EntityNavRocket.returnFromOrbitBlock(player, tile);
             return null;
         }
     }

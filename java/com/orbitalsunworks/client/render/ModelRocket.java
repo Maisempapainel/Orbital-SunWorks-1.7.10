@@ -1,169 +1,301 @@
 package com.orbitalsunworks.client.render;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.util.ResourceLocation;
 
 import org.lwjgl.opengl.GL11;
 
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
+
 /**
- * Modelo 3D do Foguete Tier 1, desenhado proceduralmente com o Tessellator
- * (sem arquivo de modelo externo). Usado pelo TESR (foguete na plataforma)
- * e pelo render da entidade (foguete em lançamento).
- *
- * Sombreamento "3D de verdade": iluminação desligada e cor por face
- * (setores do cilindro sombreados conforme o ângulo em relação à luz),
- * como um modelo techne — nada de faces pretas/invisíveis.
- *
- * Dimensões (cabe em 1x1x3 blocos):
- * - Sino do motor: 0.00-0.30 (cilindro alargando para baixo + boca escura);
- * - Corpo: 0.30-2.50 (12 lados, raio 0.38, janela na textura);
- * - 4 aletas diagonais (45°+90°*i), vermelhas, y 0.15-1.05;
- * - Nariz: 2.50-3.00 (cone).
+ * MODELO 3D DO FOGUETE ORBITAL TIER 1 (6 blocos de altura: y = 0.0 .. 6.0).
  */
+@SideOnly(Side.CLIENT)
 public class ModelRocket {
 
     private static final ResourceLocation TEX_BODY = new ResourceLocation(
-        "orbitalsunworks", "textures/models/rocket_body.png");
-    private static final ResourceLocation TEX_NOSE = new ResourceLocation(
-        "orbitalsunworks", "textures/models/rocket_nose.png");
-    private static final ResourceLocation TEX_FIN = new ResourceLocation(
-        "orbitalsunworks", "textures/models/rocket_fin.png");
-    private static final ResourceLocation TEX_ENGINE = new ResourceLocation(
+        "orbitalsunworks", "textures/models/sat_body.png");
+    private static final ResourceLocation TEX_DARK = new ResourceLocation(
         "orbitalsunworks", "textures/models/rocket_engine.png");
 
-    /** Direção da luz (ângulo no plano XZ) para o sombreamento. */
-    private static final double LIGHT_ANGLE = Math.PI / 4.0;
+    private static final float LX = 0.42f, LY = 0.82f, LZ = 0.38f;
 
-    /**
-     * Desenha o foguete inteiro. Chamar com a matriz já transladada para a
-     * posição do bloco base (0,0,0 = chão sob o foguete).
-     */
+    public static final float PAYLOAD_ADAPTER_Y = 4.35f;
+
     public void renderAll() {
-        // Sem cull (winding inconsistente não faz buraco) e sem iluminação
-        // do Minecraft (o sombreamento vem das cores por face).
         GL11.glDisable(GL11.GL_CULL_FACE);
         GL11.glDisable(GL11.GL_LIGHTING);
 
-        // Motor: sino alargando para baixo + boca escura.
-        bind(TEX_ENGINE);
-        this.renderCylinder(0.26f, 0.16f, 0.30f, 10, 0f, 0f, 0f);
-        this.renderDisc(0.26f, 10, 0f, 0f, 0f, false, 70);
+        renderCoreStages(0f);
+        renderFairingHalf(-1);
+        renderFairingHalf(1);
 
-        // Corpo + tampas.
-        bind(TEX_BODY);
-        this.renderDisc(0.38f, 12, 0f, 0.30f, 0f, true, 230);
-        this.renderCylinder(0.38f, 0.38f, 2.20f, 12, 0f, 0.30f, 0f);
-        this.renderDisc(0.38f, 12, 0f, 2.50f, 0f, true, 255);
-
-        // 4 aletas nas diagonais (não tampam a janela da frente).
-        bind(TEX_FIN);
-        for (int i = 0; i < 4; i++) {
-            GL11.glPushMatrix();
-            GL11.glRotatef(45f + i * 90f, 0f, 1f, 0f);
-            this.renderFin();
-            GL11.glPopMatrix();
-        }
-
-        // Nariz.
-        bind(TEX_NOSE);
-        this.renderCone(0.38f, 0.50f, 12, 0f, 2.50f, 0f);
-
+        GL11.glColor4f(1f, 1f, 1f, 1f);
         GL11.glEnable(GL11.GL_LIGHTING);
         GL11.glEnable(GL11.GL_CULL_FACE);
     }
 
-    /** Sombreamento de um ângulo médio de face cilíndrica (0..255). */
-    private int shadeFor(double angle) {
-        double d = Math.cos(angle - LIGHT_ANGLE);
-        float f = 0.60f + 0.40f * (float) Math.max(0.0, d);
-        return (int) (f * 255);
+    public void renderBodyWithoutFairing(float nozzleHeat) {
+        GL11.glDisable(GL11.GL_CULL_FACE);
+        GL11.glDisable(GL11.GL_LIGHTING);
+
+        renderCoreStages(nozzleHeat);
+
+        GL11.glColor4f(1f, 1f, 1f, 1f);
+        GL11.glEnable(GL11.GL_LIGHTING);
+        GL11.glEnable(GL11.GL_CULL_FACE);
     }
 
-    /** Cilindro vertical com quads texturizados e sombreamento por setor. */
-    private void renderCylinder(float rBottom, float rTop, float h, int sides, float ox, float oy, float oz) {
+    private void renderCoreStages(float nozzleHeat) {
+        bind(TEX_DARK);
+        float hr = 0.56f + 0.44f * nozzleHeat;
+        float hg = 0.60f - 0.12f * nozzleHeat;
+        float hb = 0.66f - 0.40f * nozzleHeat;
+        shadedCylinder(0.32f, 0.16f, 0.48f, 16, 0f, 0.0f, 0f, hr, hg, hb);
+        shadedDisc(0.30f, 16, 0f, 0.02f, 0f, false,
+            0.12f + 0.85f * nozzleHeat, 0.13f + 0.42f * nozzleHeat, 0.16f + 0.10f * nozzleHeat);
+        shadedCylinder(0.28f, 0.27f, 0.05f, 16, 0f, 0.14f, 0f, 0.72f, 0.75f, 0.80f);
+        shadedCylinder(0.22f, 0.21f, 0.05f, 16, 0f, 0.30f, 0f, 0.72f, 0.75f, 0.80f);
+
+        for (int s = -1; s <= 1; s += 2) {
+            shadedCylinder(0.11f, 0.06f, 0.32f, 10, s * 0.36f, 0.06f, 0f, 0.55f, 0.58f, 0.64f);
+            shadedDisc(0.10f, 10, s * 0.36f, 0.07f, 0f, false, 0.15f, 0.16f, 0.19f);
+        }
+
+        shadedCylinder(0.49f, 0.54f, 0.37f, 16, 0f, 0.48f, 0f, 0.54f, 0.58f, 0.64f);
+        shadedDisc(0.49f, 16, 0f, 0.48f, 0f, false, 0.22f, 0.24f, 0.28f);
+
+        for (int i = 0; i < 4; i++) {
+            GL11.glPushMatrix();
+            GL11.glRotatef(45f + i * 90f, 0f, 1f, 0f);
+            renderFoldedLegFairing();
+            GL11.glPopMatrix();
+        }
+
+        bind(TEX_BODY);
+        shadedCylinder(0.54f, 0.54f, 2.30f, 16, 0f, 0.85f, 0f, 0.90f, 0.93f, 0.97f);
+
+        bind(TEX_DARK);
+        shadedCylinder(0.558f, 0.558f, 0.09f, 16, 0f, 0.85f, 0f, 0.46f, 0.50f, 0.56f);
+        shadedCylinder(0.555f, 0.555f, 0.07f, 16, 0f, 1.98f, 0f, 0.50f, 0.54f, 0.60f);
+        shadedCylinder(0.558f, 0.558f, 0.09f, 16, 0f, 3.06f, 0f, 0.46f, 0.50f, 0.56f);
+        for (int s = -1; s <= 1; s += 2) {
+            drawBox(-0.06f, 0.88f, s * 0.52f - 0.045f, 0.06f, 3.10f, s * 0.52f + 0.045f,
+                0.70f, 0.74f, 0.80f, 0.30f, 0.33f, 0.38f);
+        }
+
+        GL11.glDisable(GL11.GL_TEXTURE_2D);
+        shadedCylinder(0.548f, 0.548f, 0.07f, 16, 0f, 2.86f, 0f, 0.20f, 0.82f, 0.96f);
+        GL11.glEnable(GL11.GL_TEXTURE_2D);
+
+        for (int i = 0; i < 4; i++) {
+            GL11.glPushMatrix();
+            GL11.glRotatef(i * 90f, 0f, 1f, 0f);
+            bind(TEX_DARK);
+            drawBox(-0.14f, 2.82f, 0.53f, 0.14f, 3.14f, 0.66f,
+                0.52f, 0.56f, 0.62f, 0.24f, 0.27f, 0.32f);
+            GL11.glPopMatrix();
+        }
+
+        bind(TEX_DARK);
+        shadedCylinder(0.54f, 0.50f, 0.50f, 16, 0f, 3.15f, 0f, 0.40f, 0.43f, 0.48f);
+
+        bind(TEX_BODY);
+        shadedCylinder(0.50f, 0.50f, 0.70f, 16, 0f, 3.65f, 0f, 0.88f, 0.91f, 0.95f);
+        bind(TEX_DARK);
+        shadedCylinder(0.515f, 0.515f, 0.08f, 16, 0f, 4.27f, 0f, 0.48f, 0.52f, 0.58f);
+        shadedDisc(0.50f, 16, 0f, 4.35f, 0f, true, 0.36f, 0.39f, 0.44f);
+        shadedCylinder(0.36f, 0.28f, 0.12f, 16, 0f, 4.35f, 0f, 0.52f, 0.56f, 0.62f);
+        shadedDisc(0.28f, 16, 0f, 4.47f, 0f, true, 0.65f, 0.68f, 0.74f);
+
+        for (int i = 0; i < 4; i++) {
+            GL11.glPushMatrix();
+            GL11.glRotatef(45f + i * 90f, 0f, 1f, 0f);
+            drawBox(-0.05f, 3.92f, 0.49f, 0.05f, 4.08f, 0.56f,
+                0.56f, 0.60f, 0.66f, 0.24f, 0.27f, 0.32f);
+            GL11.glPopMatrix();
+        }
+    }
+
+    public void renderFairingHalf(int side) {
+        Tessellator t = Tessellator.instance;
+        int segs = 8;
+        double a0 = side < 0 ? Math.PI / 2.0 : -Math.PI / 2.0;
+        double a1 = side < 0 ? Math.PI * 1.5 : Math.PI / 2.0;
+
+        float[] ys = { 4.35f, 4.62f, 5.20f, 5.62f, 5.88f, 6.00f };
+        float[] rs = { 0.50f, 0.62f, 0.62f, 0.40f, 0.16f, 0.03f };
+        float thickness = 0.045f;
+
+        bind(TEX_BODY);
+        for (int s = 0; s < ys.length - 1; s++) {
+            float yA = ys[s], yB = ys[s + 1];
+            float rA = rs[s], rB = rs[s + 1];
+
+            t.startDrawingQuads();
+            for (int i = 0; i < segs; i++) {
+                double ang0 = a0 + (a1 - a0) * i / segs;
+                double ang1 = a0 + (a1 - a0) * (i + 1) / segs;
+                float am = (float) ((ang0 + ang1) * 0.5);
+                float f = 0.45f + 0.55f * Math.max(0f, (float) Math.cos(am) * LX + (float) Math.sin(am) * LZ);
+                t.setColorOpaque_F(0.92f * f, 0.95f * f, 0.99f * f);
+                t.addVertexWithUV(Math.cos(ang0) * rA, yA, Math.sin(ang0) * rA, i / (double) segs, 1);
+                t.addVertexWithUV(Math.cos(ang1) * rA, yA, Math.sin(ang1) * rA, (i + 1) / (double) segs, 1);
+                t.addVertexWithUV(Math.cos(ang1) * rB, yB, Math.sin(ang1) * rB, (i + 1) / (double) segs, 0);
+                t.addVertexWithUV(Math.cos(ang0) * rB, yB, Math.sin(ang0) * rB, i / (double) segs, 0);
+            }
+            t.draw();
+
+            float irA = Math.max(0.01f, rA - thickness);
+            float irB = Math.max(0.01f, rB - thickness);
+            t.startDrawingQuads();
+            t.setColorOpaque_F(0.24f, 0.26f, 0.30f);
+            for (int i = 0; i < segs; i++) {
+                double ang0 = a0 + (a1 - a0) * i / segs;
+                double ang1 = a0 + (a1 - a0) * (i + 1) / segs;
+                t.addVertexWithUV(Math.cos(ang0) * irA, yA, Math.sin(ang0) * irA, i / (double) segs, 1);
+                t.addVertexWithUV(Math.cos(ang0) * irB, yB, Math.sin(ang0) * irB, i / (double) segs, 0);
+                t.addVertexWithUV(Math.cos(ang1) * irB, yB, Math.sin(ang1) * irB, (i + 1) / (double) segs, 0);
+                t.addVertexWithUV(Math.cos(ang1) * irA, yA, Math.sin(ang1) * irA, (i + 1) / (double) segs, 1);
+            }
+            t.draw();
+        }
+
+        bind(TEX_DARK);
+        for (int end = 0; end < 2; end++) {
+            double ang = end == 0 ? a0 : a1;
+            float ca = (float) Math.cos(ang);
+            float sa = (float) Math.sin(ang);
+            t.startDrawingQuads();
+            t.setColorOpaque_F(0.45f, 0.48f, 0.54f);
+            for (int s = 0; s < ys.length - 1; s++) {
+                float rA = rs[s], rB = rs[s + 1];
+                float irA = Math.max(0.01f, rA - thickness);
+                float irB = Math.max(0.01f, rB - thickness);
+                t.addVertexWithUV(ca * rA, ys[s], sa * rA, 0, 0);
+                t.addVertexWithUV(ca * irA, ys[s], sa * irA, 1, 0);
+                t.addVertexWithUV(ca * irB, ys[s + 1], sa * irB, 1, 1);
+                t.addVertexWithUV(ca * rB, ys[s + 1], sa * rB, 0, 1);
+            }
+            t.draw();
+        }
+    }
+
+    private void renderFoldedLegFairing() {
+        bind(TEX_DARK);
+        Tessellator t = Tessellator.instance;
+        float r = 0.51f, w = 0.78f, y0 = 0.34f, y1 = 1.92f, z = 0.06f;
+
+        t.startDrawingQuads();
+        t.setColorOpaque_F(0.48f, 0.52f, 0.58f);
+        t.addVertexWithUV(r, y0 + 0.14f, z, 0, 0);
+        t.addVertexWithUV(w, y0, z, 1, 0);
+        t.addVertexWithUV(w - 0.10f, y0 + 0.52f, z * 0.7f, 1, 1);
+        t.addVertexWithUV(r, y1, z * 0.6f, 0, 1);
+
+        t.setColorOpaque_F(0.24f, 0.27f, 0.32f);
+        t.addVertexWithUV(r, y0 + 0.14f, -z, 0, 0);
+        t.addVertexWithUV(r, y1, -z * 0.6f, 0, 1);
+        t.addVertexWithUV(w - 0.10f, y0 + 0.52f, -z * 0.7f, 1, 1);
+        t.addVertexWithUV(w, y0, -z, 1, 0);
+
+        t.setColorOpaque_F(0.36f, 0.40f, 0.46f);
+        t.addVertexWithUV(w, y0, -z, 0, 0);
+        t.addVertexWithUV(w, y0, z, 0, 1);
+        t.addVertexWithUV(w - 0.10f, y0 + 0.52f, z * 0.7f, 1, 1);
+        t.addVertexWithUV(w - 0.10f, y0 + 0.52f, -z * 0.7f, 1, 0);
+
+        t.setColorOpaque_F(0.76f, 0.80f, 0.86f);
+        t.addVertexWithUV(r, y1, -z * 0.6f, 0, 0);
+        t.addVertexWithUV(r, y1, z * 0.6f, 0, 1);
+        t.addVertexWithUV(w - 0.10f, y0 + 0.52f, z * 0.7f, 1, 1);
+        t.addVertexWithUV(w - 0.10f, y0 + 0.52f, -z * 0.7f, 1, 0);
+        t.draw();
+    }
+
+    private void shadedCylinder(float rb, float rt, float h, int sides, float ox, float oy, float oz,
+            float cr, float cg, float cb) {
         Tessellator t = Tessellator.instance;
         t.startDrawingQuads();
         for (int i = 0; i < sides; i++) {
-            double a0 = (Math.PI * 2 * i) / sides;
-            double a1 = (Math.PI * 2 * (i + 1)) / sides;
-            int c = this.shadeFor((a0 + a1) / 2.0);
-            t.setColorOpaque(c, c, c);
-            t.addVertexWithUV(ox + Math.cos(a0) * rBottom, oy, oz + Math.sin(a0) * rBottom, i / (double) sides, 1);
-            t.addVertexWithUV(ox + Math.cos(a1) * rBottom, oy, oz + Math.sin(a1) * rBottom, (i + 1) / (double) sides, 1);
-            t.addVertexWithUV(ox + Math.cos(a1) * rTop, oy + h, oz + Math.sin(a1) * rTop, (i + 1) / (double) sides, 0);
-            t.addVertexWithUV(ox + Math.cos(a0) * rTop, oy + h, oz + Math.sin(a0) * rTop, i / (double) sides, 0);
+            double a0 = Math.PI * 2 * i / sides;
+            double a1 = Math.PI * 2 * (i + 1) / sides;
+            float am = (float) ((a0 + a1) * 0.5);
+            float f = 0.42f + 0.58f * Math.max(0f, (float) Math.cos(am) * LX + (float) Math.sin(am) * LZ);
+            t.setColorOpaque_F(cr * f, cg * f, cb * f);
+            t.addVertexWithUV(ox + Math.cos(a0) * rb, oy, oz + Math.sin(a0) * rb, i / (double) sides, 1);
+            t.addVertexWithUV(ox + Math.cos(a1) * rb, oy, oz + Math.sin(a1) * rb, (i + 1) / (double) sides, 1);
+            t.addVertexWithUV(ox + Math.cos(a1) * rt, oy + h, oz + Math.sin(a1) * rt, (i + 1) / (double) sides, 0);
+            t.addVertexWithUV(ox + Math.cos(a0) * rt, oy + h, oz + Math.sin(a0) * rt, i / (double) sides, 0);
         }
         t.draw();
     }
 
-    /** Disco (tampa) no plano XZ com sombreamento fixo. */
-    private void renderDisc(float r, int sides, float ox, float oy, float oz, boolean up, int shade) {
+    private void shadedDisc(float r, int sides, float ox, float oy, float oz, boolean up,
+            float cr, float cg, float cb) {
         Tessellator t = Tessellator.instance;
         t.startDrawing(GL11.GL_TRIANGLE_FAN);
-        t.setColorOpaque(shade, shade, shade);
+        t.setColorOpaque_F(cr, cg, cb);
         t.addVertexWithUV(ox, oy, oz, 0.5, 0.5);
         for (int i = 0; i <= sides; i++) {
-            double a = (Math.PI * 2 * i) / sides * (up ? 1 : -1);
+            double a = Math.PI * 2 * i / sides * (up ? 1 : -1);
             t.addVertexWithUV(ox + Math.cos(a) * r, oy, oz + Math.sin(a) * r,
                 0.5 + Math.cos(a) * 0.5, 0.5 + Math.sin(a) * 0.5);
         }
         t.draw();
     }
 
-    /** Cone com base em oy e ápice em oy+h (sombreado por setor). */
-    private void renderCone(float r, float h, int sides, float ox, float oy, float oz) {
+    private void drawBox(float x0, float y0, float z0, float x1, float y1, float z1,
+            float lr, float lg, float lb, float dr, float dg, float db) {
         Tessellator t = Tessellator.instance;
-        t.startDrawing(GL11.GL_TRIANGLES);
-        for (int i = 0; i < sides; i++) {
-            double a0 = (Math.PI * 2 * i) / sides;
-            double a1 = (Math.PI * 2 * (i + 1)) / sides;
-            int c = this.shadeFor((a0 + a1) / 2.0);
-            t.setColorOpaque(c, c, c);
-            t.addVertexWithUV(ox + Math.cos(a0) * r, oy, oz + Math.sin(a0) * r, i / (double) sides, 1);
-            t.addVertexWithUV(ox + Math.cos(a1) * r, oy, oz + Math.sin(a1) * r, (i + 1) / (double) sides, 1);
-            t.addVertexWithUV(ox, oy + h, oz, (i + 0.5) / (double) sides, 0);
-        }
-        t.draw();
-    }
+        float f;
 
-    /** Uma aleta trapezoidal no eixo +X (chamar dentro de glRotate). */
-    private void renderFin() {
-        Tessellator t = Tessellator.instance;
-        float r = 0.34f;   // raiz no corpo
-        float w = 0.72f;   // ponta para fora
-        float y0 = 0.15f;  // borda inferior (recuada na ponta)
-        float y1 = 1.05f;  // topo da raiz
-        float z = 0.045f;  // meia-espessura
-
+        f = Math.max(0f, LY);
         t.startDrawingQuads();
-        // Face +Z (iluminada)
-        t.setColorOpaque(210, 210, 210);
-        t.addVertexWithUV(r, y0 + 0.2f, z, 0, 0);
-        t.addVertexWithUV(w, y0, z, 1, 0);
-        t.addVertexWithUV(w, y1 - 0.15f, z, 1, 1);
-        t.addVertexWithUV(r, y1, z, 0, 1);
-        // Face -Z (sombra)
-        t.setColorOpaque(120, 120, 120);
-        t.addVertexWithUV(r, y0 + 0.2f, -z, 0, 0);
-        t.addVertexWithUV(r, y1, -z, 0, 1);
-        t.addVertexWithUV(w, y1 - 0.15f, -z, 1, 1);
-        t.addVertexWithUV(w, y0, -z, 1, 0);
-        // Borda externa
-        t.setColorOpaque(170, 170, 170);
-        t.addVertexWithUV(w, y0, -z, 0, 0);
-        t.addVertexWithUV(w, y0, z, 0, 1);
-        t.addVertexWithUV(w, y1 - 0.15f, z, 1, 1);
-        t.addVertexWithUV(w, y1 - 0.15f, -z, 1, 0);
-        // Borda superior (da raiz até a ponta)
-        t.setColorOpaque(230, 230, 230);
-        t.addVertexWithUV(r, y1, -z, 0, 0);
-        t.addVertexWithUV(r, y1, z, 0, 1);
-        t.addVertexWithUV(w, y1 - 0.15f, z, 1, 1);
-        t.addVertexWithUV(w, y1 - 0.15f, -z, 1, 0);
+        t.setColorOpaque_F(dr + (lr - dr) * f, dg + (lg - dg) * f, db + (lb - db) * f);
+        t.addVertexWithUV(x0, y1, z1, 0, 1); t.addVertexWithUV(x1, y1, z1, 1, 1);
+        t.addVertexWithUV(x1, y1, z0, 1, 0); t.addVertexWithUV(x0, y1, z0, 0, 0);
+        t.draw();
+
+        f = Math.max(0f, -LY);
+        t.startDrawingQuads();
+        t.setColorOpaque_F(dr + (lr - dr) * f, dg + (lg - dg) * f, db + (lb - db) * f);
+        t.addVertexWithUV(x0, y0, z0, 0, 1); t.addVertexWithUV(x1, y0, z0, 1, 1);
+        t.addVertexWithUV(x1, y0, z1, 1, 0); t.addVertexWithUV(x0, y0, z1, 0, 0);
+        t.draw();
+
+        f = Math.max(0f, LX);
+        t.startDrawingQuads();
+        t.setColorOpaque_F(dr + (lr - dr) * f, dg + (lg - dg) * f, db + (lb - db) * f);
+        t.addVertexWithUV(x1, y0, z1, 0, 0); t.addVertexWithUV(x1, y0, z0, 1, 0);
+        t.addVertexWithUV(x1, y1, z0, 1, 1); t.addVertexWithUV(x1, y1, z1, 0, 1);
+        t.draw();
+
+        f = Math.max(0f, -LX);
+        t.startDrawingQuads();
+        t.setColorOpaque_F(dr + (lr - dr) * f, dg + (lg - dg) * f, db + (lb - db) * f);
+        t.addVertexWithUV(x0, y0, z0, 0, 0); t.addVertexWithUV(x0, y0, z1, 1, 0);
+        t.addVertexWithUV(x0, y1, z1, 1, 1); t.addVertexWithUV(x0, y1, z0, 0, 1);
+        t.draw();
+
+        f = Math.max(0f, LZ);
+        t.startDrawingQuads();
+        t.setColorOpaque_F(dr + (lr - dr) * f, dg + (lg - dg) * f, db + (lb - db) * f);
+        t.addVertexWithUV(x0, y0, z1, 0, 0); t.addVertexWithUV(x1, y0, z1, 1, 0);
+        t.addVertexWithUV(x1, y1, z1, 1, 1); t.addVertexWithUV(x0, y1, z1, 0, 1);
+        t.draw();
+
+        f = Math.max(0f, -LZ);
+        t.startDrawingQuads();
+        t.setColorOpaque_F(dr + (lr - dr) * f, dg + (lg - dg) * f, db + (lb - db) * f);
+        t.addVertexWithUV(x0, y1, z0, 0, 1); t.addVertexWithUV(x1, y1, z0, 1, 1);
+        t.addVertexWithUV(x1, y0, z0, 1, 0); t.addVertexWithUV(x0, y0, z0, 0, 0);
         t.draw();
     }
 
     private void bind(ResourceLocation tex) {
-        net.minecraft.client.Minecraft.getMinecraft().getTextureManager().bindTexture(tex);
+        Minecraft.getMinecraft().getTextureManager().bindTexture(tex);
     }
 }
