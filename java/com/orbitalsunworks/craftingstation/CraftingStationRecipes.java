@@ -3,10 +3,8 @@ package com.orbitalsunworks.craftingstation;
 import java.util.ArrayList;
 import java.util.List;
 
-import net.minecraft.block.Block;
 import net.minecraft.init.Blocks;
 import net.minecraft.init.Items;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.oredict.OreDictionary;
 
@@ -15,25 +13,15 @@ import com.orbitalsunworks.OSItems;
 
 /**
  * Receitas da Estação de Crafting Orbital (grade 3x5).
- *
- * O sistema suporta:
- * - Receitas "shaped" (formato fixo, 5 colunas x 3 linhas);
- * - Receitas "shapeless" (qualquer posição);
- * - Ingredientes por item OU por nome do OreDictionary (ex.: "ingotCopper"
- *   aceita o cobre deste mod e de qualquer outro mod que o registre).
- *
- * Receitas dos materiais básicos também existem como receitas vanilla 3x3
- * (ver OSCrafting) para facilitar a vida do jogador.
  */
 public class CraftingStationRecipes {
 
-    /** Uma receita shaped da grade 3x5. */
     public static class ShapedRecipe {
-        public final int width;        // 1-5
-        public final int height;       // 1-3
-        public final Object[] inputs;  // ItemStack/String por célula, null = vazio
+        public final int width;
+        public final int height;
+        public final Object[] inputs;
         public final ItemStack output;
-        public final int craftTime;    // ticks
+        public final int craftTime;
 
         public ShapedRecipe(int width, int height, Object[] inputs, ItemStack output, int craftTime) {
             this.width = width;
@@ -44,11 +32,10 @@ public class CraftingStationRecipes {
         }
     }
 
-    /** Uma receita shapeless (qualquer ordem). */
     public static class ShapelessRecipe {
         public final List<Object> inputs = new ArrayList<Object>();
         public final ItemStack output;
-        public final int craftTime;    // ticks
+        public final int craftTime;
 
         ShapelessRecipe(ItemStack output, int craftTime) {
             this.output = output;
@@ -56,11 +43,8 @@ public class CraftingStationRecipes {
         }
     }
 
-    /** Tempo padrão de craft (ticks) para receitas simples: 3 segundos. */
     public static final int TIME_SMALL = 60;
-    /** Receitas médias (painel solar, módulos): 6 segundos. */
     public static final int TIME_MEDIUM = 120;
-    /** Receitas grandes (foguete): 25 segundos. */
     public static final int TIME_LARGE = 500;
 
     private static final List<ShapedRecipe> shapedRecipes = new ArrayList<ShapedRecipe>();
@@ -70,78 +54,69 @@ public class CraftingStationRecipes {
         // ------------------------------------------------------------------
         // MATERIAIS
         // ------------------------------------------------------------------
-
-        // Fibra de Carbono: carvão + vidro (SHAPED — posição fixa, igual
-        // ao manual: carvão na linha de cima, vidro na de baixo).
         addShaped(2, 2, new Object[]{
             new ItemStack(Items.coal), new ItemStack(Items.coal),
             new ItemStack(Blocks.glass_pane), new ItemStack(Blocks.glass_pane)
         }, new ItemStack(OSItems.carbonFiber, 2), TIME_SMALL);
 
-        // Aço: 2 ferro em cima + fibra embaixo (SHAPED, posição fixa).
         addShaped(2, 2, new Object[]{
             new ItemStack(Items.iron_ingot), new ItemStack(Items.iron_ingot),
             new ItemStack(OSItems.carbonFiber), null
         }, new ItemStack(OSItems.ingotSteel, 2), TIME_SMALL);
 
-        // Liga de Alumínio: 3 alumínio em cima + carvão energizado embaixo
-        // (SHAPED — a posição do carvão importa).
         addShaped(3, 2, new Object[]{
             "ingotAluminium", "ingotAluminium", "ingotAluminium",
             null, new ItemStack(OSItems.energizedCoal), null
         }, new ItemStack(OSItems.ingotAluminiumAlloy, 3), TIME_SMALL);
 
-        // Liga de Titânio: 3 titânio em cima + carvão energizado embaixo.
         addShaped(3, 2, new Object[]{
             "ingotTitanium", "ingotTitanium", "ingotTitanium",
             null, new ItemStack(OSItems.energizedCoal), null
         }, new ItemStack(OSItems.ingotTitaniumAlloy, 3), TIME_SMALL);
 
-        // Circuito Eletrônico: cobre + estanho + alumínio + redmeg.
-        // Formato em cruz (shaped 3x3 dentro da grade 3x5).
         addShaped(3, 3, new Object[]{
-            "ingotCopper",  "ingotTin",     "ingotCopper",
+            "ingotCopper",    "ingotTin",     "ingotCopper",
             "ingotAluminium", new ItemStack(OSItems.ingotRedmeg), "ingotAluminium",
-            "ingotCopper",  "ingotTin",     "ingotCopper"
+            "ingotCopper",    "ingotTin",     "ingotCopper"
         }, new ItemStack(OSItems.itemCircuit, 2), TIME_SMALL);
 
-        // Módulo de Controle: circuitos + aço + redmeg.
         addShaped(3, 3, new Object[]{
             new ItemStack(OSItems.itemCircuit), new ItemStack(OSItems.itemCircuit), new ItemStack(OSItems.itemCircuit),
             new ItemStack(OSItems.ingotSteel), new ItemStack(OSItems.ingotRedmeg), new ItemStack(OSItems.ingotSteel),
             null, new ItemStack(OSItems.ingotSteel), null
         }, new ItemStack(OSItems.itemControlModule, 1), TIME_MEDIUM);
 
-        // Antena T1: aero com circuitos
+        // Antenas T1-T5
         addShaped(3, 3, new Object[]{
             null, new ItemStack(OSItems.itemCircuit), null,
             null, "ingotCopper", null,
             null, "ingotCopper", null
         }, new ItemStack(OSItems.itemAntennaT1, 1), TIME_MEDIUM);
 
-        // Antenas de tier maior: antena anterior + 2 redmeg + 2 liga de titânio.
         addShaped(3, 3, new Object[]{
             null, new ItemStack(OSItems.ingotRedmeg), null,
             "ingotTitaniumAlloy", antStack(1), "ingotTitaniumAlloy",
             null, new ItemStack(OSItems.ingotRedmeg), null
         }, new ItemStack(OSItems.itemAntennaT2, 1), TIME_MEDIUM);
+
         addShaped(3, 3, new Object[]{
             null, new ItemStack(OSItems.ingotRedmeg), null,
             "ingotTitaniumAlloy", antStack(2), "ingotTitaniumAlloy",
             null, new ItemStack(OSItems.ingotRedmeg), null
         }, new ItemStack(OSItems.itemAntennaT3, 1), TIME_MEDIUM);
+
         addShaped(3, 3, new Object[]{
             null, new ItemStack(OSItems.ingotRedmeg), null,
             "ingotTitaniumAlloy", antStack(3), "ingotTitaniumAlloy",
             null, new ItemStack(OSItems.ingotRedmeg), null
         }, new ItemStack(OSItems.itemAntennaT4, 1), TIME_MEDIUM);
+
         addShaped(3, 3, new Object[]{
             null, new ItemStack(OSItems.ingotYellomite), null,
             "ingotTitaniumAlloy", antStack(4), "ingotTitaniumAlloy",
             null, new ItemStack(OSItems.ingotYellomite), null
         }, new ItemStack(OSItems.itemAntennaT5, 1), TIME_MEDIUM);
 
-        // Painel Solar T1: vidro + silício + circuitos + aço/titânio/redmeg/yellomite.
         addShaped(3, 3, new Object[]{
             new ItemStack(Blocks.glass_pane), new ItemStack(Blocks.glass_pane), new ItemStack(Blocks.glass_pane),
             "itemSilicon", new ItemStack(OSItems.ingotYellomite), "itemSilicon",
@@ -149,64 +124,105 @@ public class CraftingStationRecipes {
         }, new ItemStack(OSItems.itemSolarPanelT1, 2), TIME_MEDIUM);
 
         // ------------------------------------------------------------------
-        // BLOCOS
+        // BLOCOS E REPARO
         // ------------------------------------------------------------------
-
-        // Bloco Revestido: ligas + fibra de carbono (o esqueleto do satélite).
         addShaped(3, 3, new Object[]{
             "ingotAluminiumAlloy", new ItemStack(OSItems.carbonFiber), "ingotAluminiumAlloy",
             new ItemStack(OSItems.carbonFiber), "ingotTitaniumAlloy", new ItemStack(OSItems.carbonFiber),
             "ingotAluminiumAlloy", new ItemStack(OSItems.carbonFiber), "ingotAluminiumAlloy"
         }, new ItemStack(OSBlocks.blockCladded, 4), TIME_SMALL);
 
-        // Computador Central: módulo de controle + circuitos + aço.
         addShaped(3, 3, new Object[]{
             new ItemStack(OSItems.itemCircuit), new ItemStack(OSItems.ingotSteel), new ItemStack(OSItems.itemCircuit),
             new ItemStack(OSItems.ingotSteel), new ItemStack(OSItems.itemControlModule), new ItemStack(OSItems.ingotSteel),
             new ItemStack(OSItems.itemCircuit), new ItemStack(OSItems.ingotSteel), new ItemStack(OSItems.itemCircuit)
         }, new ItemStack(OSBlocks.blockComputer, 1), TIME_MEDIUM);
 
-        // Estação de Crafting (a própria estação é craftada em mesa vanilla - ver OSCrafting)
-
-        // Plataforma de Lançamento: aço + bloco revestido.
         addShaped(3, 3, new Object[]{
             "ingotSteel", new ItemStack(OSBlocks.blockCladded), "ingotSteel",
             new ItemStack(OSBlocks.blockCladded), new ItemStack(OSItems.itemControlModule), new ItemStack(OSBlocks.blockCladded),
             "ingotSteel", new ItemStack(OSBlocks.blockCladded), "ingotSteel"
         }, new ItemStack(OSBlocks.blockLaunchPlatform, 9), TIME_MEDIUM);
 
-        // Escudo de Detrito (módulo): liga de titânio + fibra + circuito.
+        // Kit de Reparo (2x)
+        addShaped(3, 3, new Object[]{
+            "ingotSteel", "ingotTitaniumAlloy", "ingotSteel",
+            "ingotTitaniumAlloy", new ItemStack(OSItems.itemCircuit), "ingotTitaniumAlloy",
+            "ingotSteel", new ItemStack(Items.redstone), "ingotSteel"
+        }, new ItemStack(OSItems.itemRepairKit, 2), TIME_SMALL);
+
+        // ------------------------------------------------------------------
+        // MÓDULOS DE ESCUDO CONTRA DETRITOS (T1, T2, T3)
+        // ------------------------------------------------------------------
         addShaped(3, 3, new Object[]{
             "ingotTitaniumAlloy", new ItemStack(OSItems.carbonFiber), "ingotTitaniumAlloy",
             new ItemStack(OSItems.carbonFiber), new ItemStack(OSItems.itemCircuit), new ItemStack(OSItems.carbonFiber),
             "ingotTitaniumAlloy", new ItemStack(OSItems.carbonFiber), "ingotTitaniumAlloy"
         }, new ItemStack(OSItems.itemModuleDebrisShield, 1), TIME_MEDIUM);
 
+        addShaped(3, 3, new Object[]{
+            new ItemStack(OSItems.ingotYellomite), new ItemStack(OSItems.itemModuleDebrisShield), new ItemStack(OSItems.ingotYellomite),
+            "ingotTitaniumAlloy", new ItemStack(OSItems.itemCircuit), "ingotTitaniumAlloy",
+            new ItemStack(OSItems.ingotYellomite), new ItemStack(OSItems.carbonFiber), new ItemStack(OSItems.ingotYellomite)
+        }, new ItemStack(OSItems.itemModuleDebrisShieldT2, 1), TIME_MEDIUM);
+
+        addShaped(3, 3, new Object[]{
+            new ItemStack(OSItems.ingotRedmeg), new ItemStack(OSItems.itemModuleDebrisShieldT2), new ItemStack(OSItems.ingotRedmeg),
+            "ingotTitaniumAlloy", new ItemStack(OSItems.itemControlModule), "ingotTitaniumAlloy",
+            new ItemStack(OSItems.ingotRedmeg), new ItemStack(OSItems.ingotYellomite), new ItemStack(OSItems.ingotRedmeg)
+        }, new ItemStack(OSItems.itemModuleDebrisShieldT3, 1), TIME_MEDIUM);
+
         // ------------------------------------------------------------------
-        // FOGUETE TIER 1 - a primeira receita que usa as 15 posições (3x5).
-        // Layout (grade 3x5, cada linha tem 5):
-        //   [ A ] [ P ] [ P ] [ P ] [ A ]      A = antena T1, P = painel solar T1
-        //   [ B ] [ B ] [ B ] [ B ] [ B ]      B = bloco revestido
-        //   [ T ] [ T ] [ C ] [ T ] [ T ]      T = liga de titânio, C = módulo de controle
+        // MÓDULOS DE EFICIÊNCIA ENERGÉTICA (T1 +8%, T2 +12%, T3 +18%)
         // ------------------------------------------------------------------
+        addShaped(3, 3, new Object[]{
+            "itemSilicon", new ItemStack(OSItems.ingotYellomite), "itemSilicon",
+            new ItemStack(OSItems.itemCircuit), new ItemStack(OSItems.itemSolarPanelT1), new ItemStack(OSItems.itemCircuit),
+            "ingotAluminiumAlloy", new ItemStack(OSItems.itemCircuit), "ingotAluminiumAlloy"
+        }, new ItemStack(OSItems.itemModuleEfficiencyT1, 1), TIME_MEDIUM);
+
+        addShaped(3, 3, new Object[]{
+            new ItemStack(OSItems.ingotYellomite), new ItemStack(OSItems.itemModuleEfficiencyT1), new ItemStack(OSItems.ingotYellomite),
+            "ingotTitaniumAlloy", new ItemStack(OSItems.ingotRedmeg), "ingotTitaniumAlloy",
+            new ItemStack(OSItems.ingotYellomite), new ItemStack(OSItems.itemCircuit), new ItemStack(OSItems.ingotYellomite)
+        }, new ItemStack(OSItems.itemModuleEfficiencyT2, 1), TIME_MEDIUM);
+
+        addShaped(3, 3, new Object[]{
+            new ItemStack(OSItems.ingotRedmeg), new ItemStack(OSItems.itemModuleEfficiencyT2), new ItemStack(OSItems.ingotRedmeg),
+            "ingotTitaniumAlloy", new ItemStack(OSItems.itemControlModule), "ingotTitaniumAlloy",
+            new ItemStack(OSItems.itemSolarPanelT1), new ItemStack(OSItems.ingotYellomite), new ItemStack(OSItems.itemSolarPanelT1)
+        }, new ItemStack(OSItems.itemModuleEfficiencyT3, 1), TIME_MEDIUM);
+
+        // ------------------------------------------------------------------
+        // FOGUETES & ESTAÇÃO DE CONTROLE (3x5)
+        // ------------------------------------------------------------------
+        // Foguete Tier 1
         addShaped(5, 3, new Object[]{
             new ItemStack(OSItems.itemAntennaT1), new ItemStack(OSItems.itemSolarPanelT1), new ItemStack(OSItems.itemSolarPanelT1), new ItemStack(OSItems.itemSolarPanelT1), new ItemStack(OSItems.itemAntennaT1),
             new ItemStack(OSBlocks.blockCladded), new ItemStack(OSBlocks.blockCladded), new ItemStack(OSBlocks.blockCladded), new ItemStack(OSBlocks.blockCladded), new ItemStack(OSBlocks.blockCladded),
             "ingotTitaniumAlloy", "ingotTitaniumAlloy", new ItemStack(OSItems.itemControlModule), "ingotTitaniumAlloy", "ingotTitaniumAlloy"
         }, new ItemStack(OSItems.itemRocketT1, 1), TIME_LARGE);
 
-        // ------------------------------------------------------------------
-        // FOGUETE DE NAVEGAÇÃO (v0.6.0) — o "táxi orbital". Mais leve que
-        // o T1 (não leva satélite, só o piloto):
-        //   [ P ] [ A ] [ P ]
-        //   [ B ] [ C ] [ B ]
-        //   [ T ] [ T ] [ T ]
-        // ------------------------------------------------------------------
+        // Foguete de Navegação
         addShaped(3, 3, new Object[]{
             new ItemStack(OSItems.itemSolarPanelT1), new ItemStack(OSItems.itemAntennaT1), new ItemStack(OSItems.itemSolarPanelT1),
             new ItemStack(OSBlocks.blockCladded), new ItemStack(OSItems.itemControlModule), new ItemStack(OSBlocks.blockCladded),
             "ingotTitaniumAlloy", "ingotTitaniumAlloy", "ingotTitaniumAlloy"
         }, new ItemStack(OSItems.itemNavRocket, 1), TIME_LARGE);
+
+        // Foguete Dispersor de Meteoros (interceptador estratosférico 3x5)
+        addShaped(5, 3, new Object[]{
+            new ItemStack(OSItems.ingotRedmeg), new ItemStack(Items.gunpowder), new ItemStack(OSItems.itemCircuit), new ItemStack(Items.gunpowder), new ItemStack(OSItems.ingotRedmeg),
+            new ItemStack(OSBlocks.blockCladded), new ItemStack(OSBlocks.blockCladded), new ItemStack(OSItems.itemControlModule), new ItemStack(OSBlocks.blockCladded), new ItemStack(OSBlocks.blockCladded),
+            "ingotTitaniumAlloy", new ItemStack(OSItems.carbonFiber), new ItemStack(OSItems.itemAntennaT1), new ItemStack(OSItems.carbonFiber), "ingotTitaniumAlloy"
+        }, new ItemStack(OSItems.itemDispersionRocket, 1), TIME_MEDIUM);
+
+        // Estação de Controle Orbital (Multiblock 15x11x13 — crafting avançado 3x5)
+        addShaped(5, 3, new Object[]{
+            antStack(2), new ItemStack(OSItems.ingotYellomite), new ItemStack(OSBlocks.blockComputer), new ItemStack(OSItems.ingotYellomite), antStack(2),
+            new ItemStack(OSBlocks.blockCladded), new ItemStack(OSItems.itemSolarPanelT1), new ItemStack(OSItems.itemControlModule), new ItemStack(OSItems.itemSolarPanelT1), new ItemStack(OSBlocks.blockCladded),
+            "ingotTitaniumAlloy", new ItemStack(OSItems.ingotRedmeg), new ItemStack(OSBlocks.blockComputer), new ItemStack(OSItems.ingotRedmeg), "ingotTitaniumAlloy"
+        }, new ItemStack(OSItems.itemControlStation, 1), TIME_LARGE);
     }
 
     private static ItemStack antStack(int tier) {
@@ -218,10 +234,6 @@ public class CraftingStationRecipes {
             default: return new ItemStack(OSItems.itemAntennaT5);
         }
     }
-
-    // ------------------------------------------------------------------
-    // Registro de receitas
-    // ------------------------------------------------------------------
 
     public static void addShaped(int width, int height, Object[] inputs, ItemStack output, int craftTime) {
         shapedRecipes.add(new ShapedRecipe(width, height, inputs, output, craftTime));
@@ -235,11 +247,6 @@ public class CraftingStationRecipes {
         shapelessRecipes.add(recipe);
     }
 
-    // ------------------------------------------------------------------
-    // Busca de receita
-    // ------------------------------------------------------------------
-
-    /** Receita encontrada: resultado + tempo de craft. */
     public static class RecipeMatch {
         public final ItemStack output;
         public final int craftTime;
@@ -250,19 +257,12 @@ public class CraftingStationRecipes {
         }
     }
 
-    /**
-     * Procura uma receita que case com a grade atual (16 slots, 15 de grade).
-     * Retorna o match (saída + tempo) ou null.
-     */
     public static RecipeMatch findRecipe(ItemStack[] slots) {
-        // Converte a grade 3x5 para matriz [row][col].
         ItemStack[][] grid = new ItemStack[3][5];
         for (int i = 0; i < 15; i++) {
             grid[i / 5][i % 5] = slots[i];
         }
 
-        // 1) Receitas shaped: a receita pode estar em qualquer posição dentro
-        //    da grade 3x5 (a grade é maior que a receita).
         for (ShapedRecipe recipe : shapedRecipes) {
             for (int rowOff = 0; rowOff <= 3 - recipe.height; rowOff++) {
                 for (int colOff = 0; colOff <= 5 - recipe.width; colOff++) {
@@ -273,7 +273,6 @@ public class CraftingStationRecipes {
             }
         }
 
-        // 2) Receitas shapeless: juntar todos os itens e comparar quantidades.
         List<ItemStack> present = new ArrayList<ItemStack>();
         for (int i = 0; i < 15; i++) {
             if (slots[i] != null) {
@@ -305,7 +304,6 @@ public class CraftingStationRecipes {
         return true;
     }
 
-    /** Um ingrediente (ItemStack, String oreDict ou null) casa com o slot? */
     private static boolean ingredientMatches(Object required, ItemStack present) {
         if (required == null) {
             return present == null;
@@ -316,11 +314,10 @@ public class CraftingStationRecipes {
         if (required instanceof ItemStack) {
             ItemStack req = (ItemStack) required;
             return req.getItem() == present.getItem()
-                && (req.getItemDamage() == net.minecraftforge.oredict.OreDictionary.WILDCARD_VALUE
+                && (req.getItemDamage() == OreDictionary.WILDCARD_VALUE
                     || req.getItemDamage() == present.getItemDamage());
         }
         if (required instanceof String) {
-            // Nome OreDictionary: aceita item de qualquer mod registrado.
             for (ItemStack ore : OreDictionary.getOres((String) required)) {
                 if (ore.getItem() == present.getItem()
                     && (ore.getItemDamage() == OreDictionary.WILDCARD_VALUE
@@ -336,7 +333,6 @@ public class CraftingStationRecipes {
         if (present.size() != recipe.inputs.size()) {
             return false;
         }
-        // Cada ingrediente precisa casar com um item presente, 1 a 1.
         List<ItemStack> restantes = new ArrayList<ItemStack>(present);
         for (Object required : recipe.inputs) {
             boolean found = false;

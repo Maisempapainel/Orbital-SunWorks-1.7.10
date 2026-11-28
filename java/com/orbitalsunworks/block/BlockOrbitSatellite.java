@@ -6,6 +6,7 @@ import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.AxisAlignedBB;
 import net.minecraft.util.IIcon;
 import net.minecraft.world.Explosion;
 import net.minecraft.world.IBlockAccess;
@@ -21,6 +22,8 @@ import cpw.mods.fml.relauncher.SideOnly;
 
 /**
  * Estrutura física central do satélite em órbita (indestrutível e iluminada).
+ * A colisão dinâmica completa (corpo + painéis giratórios + antena) é gerida
+ * por SatelliteCollisionPhysics sem travamentos de blocos estáticos.
  */
 public class BlockOrbitSatellite extends Block {
 
@@ -35,7 +38,12 @@ public class BlockOrbitSatellite extends Block {
         this.setResistance(6000000.0f);
         this.setLightLevel(0.85f);
         this.setStepSound(soundTypeMetal);
-        this.setBlockBounds(0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f);
+        this.setBlockBounds(-0.35f, 0.0f, -0.35f, 1.35f, 1.0f, 1.35f);
+    }
+
+    @Override
+    public AxisAlignedBB getCollisionBoundingBoxFromPool(World world, int x, int y, int z) {
+        return null;
     }
 
     @Override

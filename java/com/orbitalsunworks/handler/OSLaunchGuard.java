@@ -15,11 +15,17 @@ public class OSLaunchGuard {
 
     public static final int TRAJECTORY_HEIGHT = 256;
 
+    public static boolean isRocketBlock(Block b) {
+        return b == OSBlocks.blockRocket
+            || b == OSBlocks.blockNavRocket
+            || b == OSBlocks.blockDispersionRocket;
+    }
+
     public static boolean isAboveLaunchColumn(World world, int x, int y, int z) {
         int baseY = -1;
         for (int dy = 1; dy <= 10; dy++) {
             Block below = world.getBlock(x, y - dy, z);
-            if (below == OSBlocks.blockRocket || below == OSBlocks.blockNavRocket) {
+            if (isRocketBlock(below)) {
                 baseY = y - dy;
                 break;
             }
@@ -36,7 +42,7 @@ public class OSLaunchGuard {
             return false;
         }
         Block ground = world.getBlock(x, baseY, z);
-        if (ground == OSBlocks.blockRocket || ground == OSBlocks.blockNavRocket) {
+        if (isRocketBlock(ground)) {
             return true;
         }
         return com.orbitalsunworks.block.BlockLaunchPlatform.isCompleteStructure(world, x, baseY, z);
@@ -44,6 +50,9 @@ public class OSLaunchGuard {
 
     @SubscribeEvent
     public void onBlockPlace(net.minecraftforge.event.world.BlockEvent.PlaceEvent event) {
+        if (isRocketBlock(event.block)) {
+            return;
+        }
         World world = event.world;
         if (isAboveLaunchColumn(world, event.x, event.y, event.z)) {
             event.setCanceled(true);
@@ -64,7 +73,7 @@ public class OSLaunchGuard {
         int top = Math.min(world.getHeight(), baseY + TRAJECTORY_HEIGHT);
         for (int y = baseY + 1; y < top; y++) {
             Block b = world.getBlock(x, y, z);
-            if (b == Blocks.air || b == OSBlocks.blockRocket || b == OSBlocks.blockNavRocket) {
+            if (b == Blocks.air || isRocketBlock(b)) {
                 continue;
             }
             if (b.isReplaceable((IBlockAccess) world, x, y, z)) {

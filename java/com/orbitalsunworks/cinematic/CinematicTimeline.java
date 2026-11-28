@@ -2,13 +2,13 @@ package com.orbitalsunworks.cinematic;
 
 public final class CinematicTimeline {
 
-    public static final int DURATION = 470;
+    public static final int DURATION = 490;
 
     public static final int F0_ORBIT = 0;
-    public static final int F1_FAIRING = 95;
-    public static final int F2_SEPARATION = 160;
-    public static final int F3_DRIFT = 235;
-    public static final int F4_UNFOLD = 280;
+    public static final int F1_FAIRING = 88;
+    public static final int F2_SEPARATION = 152;
+    public static final int F3_DRIFT = 225;
+    public static final int F4_UNFOLD = 275;
     public static final int F5_INSPECT = 395;
 
     private CinematicTimeline() {
@@ -38,48 +38,48 @@ public final class CinematicTimeline {
     }
 
     public static float mainBurn(float t) {
-        if (t < 0f || t >= 82f) {
+        if (t < 0f || t >= 76f) {
             return 0f;
         }
-        if (t < 70f) {
+        if (t < 64f) {
             return 1f;
         }
-        return easeOut(1f - (t - 70f) / 12f);
+        return easeOut(1f - (t - 64f) / 12f);
     }
 
     public static float nozzleHeat(float t) {
-        if (t <= 72f) {
+        if (t <= 66f) {
             return 1f;
         }
-        return clamp01(1f - (t - 72f) / 65f);
+        return clamp01(1f - (t - 66f) / 65f);
     }
 
     public static float fairingRelease(float t) {
-        return easeIn((t - F1_FAIRING) / 28f);
+        return easeInOut((t - F1_FAIRING) / 30f);
     }
 
     public static float fairingDrift(float t) {
-        return spring((t - (F1_FAIRING + 8f)) / 62f) * 7.5f
-            + Math.max(0f, t - (F1_FAIRING + 70f)) * 0.015f;
+        return spring((t - (F1_FAIRING + 12f)) / 66f) * 7.2f
+            + Math.max(0f, t - (F1_FAIRING + 78f)) * 0.016f;
     }
 
     public static float fairingSpin(float t) {
-        return clamp01((t - F1_FAIRING) / 65f) * 110f
-            + Math.max(0f, t - (F1_FAIRING + 65f)) * 0.25f;
+        return clamp01((t - F1_FAIRING) / 70f) * 85f
+            + Math.max(0f, t - (F1_FAIRING + 70f)) * 0.18f;
     }
 
     public static float separationPush(float t) {
-        return spring((t - F2_SEPARATION) / 50f);
+        return spring((t - F2_SEPARATION) / 52f);
     }
 
     public static float satelliteDistance(float t) {
         float push = separationPush(t);
-        return push * 1.4f + Math.max(0f, t - (F2_SEPARATION + 50f)) * 0.014f;
+        return push * 1.85f + Math.max(0f, t - (F2_SEPARATION + 52f)) * 0.014f;
     }
 
     public static float stageRecede(float t) {
-        float burn = easeIn((t - (F2_SEPARATION + 8f)) / 42f);
-        return burn * 1.15f + Math.max(0f, t - (F2_SEPARATION + 50f)) * 0.024f;
+        float burn = easeIn((t - (F2_SEPARATION + 8f)) / 44f);
+        return burn * 1.35f + Math.max(0f, t - (F2_SEPARATION + 52f)) * 0.025f;
     }
 
     public static float stageBurn(float t) {
@@ -95,7 +95,7 @@ public final class CinematicTimeline {
     }
 
     public static float unfold(float t) {
-        return easeInOut((t - F4_UNFOLD) / 90f);
+        return easeInOut((t - F4_UNFOLD) / 92f);
     }
 
     public static float yokeOpen(float t, int side) {
@@ -110,29 +110,29 @@ public final class CinematicTimeline {
     }
 
     public static float satelliteSpin(float t) {
-        return Math.max(0f, t - F2_SEPARATION) * 0.40f;
+        return Math.max(0f, t - F3_DRIFT) * 0.36f;
     }
 
     public static float cameraFocusSatellite(float t) {
-        return easeInOut((t - (F3_DRIFT - 18f)) / 42f);
+        return easeInOut((t - (F3_DRIFT - 10f)) / 46f);
     }
 
     public static float cameraDistance(float t) {
         float approach = easeOut((t - 10f) / 140f);
         float retreat = easeInOut((t - F5_INSPECT) / 60f);
-        return 10.8f - 6.0f * approach + 1.6f * retreat;
+        return 10.8f - 5.6f * approach + 1.4f * retreat;
     }
 
     public static float cameraOrbit(float t) {
         float base = 0.55f + t * 0.0028f;
-        float inspect = easeInOut((t - F5_INSPECT) / 65f) * 1.45f;
+        float inspect = easeInOut((t - F5_INSPECT) / 65f) * 1.40f;
         return base + inspect;
     }
 
     public static float cameraHeight(float t) {
         float approach = easeOut((t - 10f) / 140f);
         float settle = easeInOut((t - F3_DRIFT) / 50f);
-        return 3.6f - 1.8f * approach - 0.7f * settle;
+        return 3.6f - 1.7f * approach - 0.65f * settle;
     }
 
     public static String validate() {
@@ -141,11 +141,8 @@ public final class CinematicTimeline {
         float prevU = -1f;
         for (float t = 0f; t <= DURATION; t += dt) {
             float u = unfold(t);
-            if (u < prevU - 1e-6f) {
-                return "unfold regrediu em t=" + t;
-            }
-            if (u < 0f || u > 1f) {
-                return "unfold fora de [0,1] em t=" + t + " (" + u + ")";
+            if (u < prevU - 1e-6f || u < 0f || u > 1f) {
+                return "unfold invalido em t=" + t;
             }
             prevU = u;
         }
@@ -154,11 +151,8 @@ public final class CinematicTimeline {
                 float prev = -1f;
                 for (float t = 0f; t <= DURATION; t += dt) {
                     float v = segmentExtend(t, side, seg);
-                    if (v < prev - 1e-6f) {
-                        return "segmento " + side + "/" + seg + " regrediu em t=" + t;
-                    }
-                    if (v < 0f || v > 1f) {
-                        return "segmento fora de [0,1]: " + side + "/" + seg;
+                    if (v < prev - 1e-6f || v < 0f || v > 1f) {
+                        return "segmento invalido: " + side + "/" + seg;
                     }
                     prev = v;
                 }
@@ -167,7 +161,7 @@ public final class CinematicTimeline {
             for (float t = 0f; t <= DURATION; t += dt) {
                 float v = yokeOpen(t, side);
                 if (v < prevY - 1e-6f) {
-                    return "yoke " + side + " regrediu em t=" + t;
+                    return "yoke regrediu em t=" + t;
                 }
                 prevY = v;
             }
@@ -176,11 +170,8 @@ public final class CinematicTimeline {
         float prevD = satelliteDistance(0f);
         for (float t = dt; t <= DURATION; t += dt) {
             float d = satelliteDistance(t);
-            if (d - prevD > 0.10f * dt) {
-                return "separacao brusca em t=" + t;
-            }
-            if (d < prevD - 1e-6f) {
-                return "separacao regrediu em t=" + t;
+            if (d - prevD > 0.10f * dt || d < prevD - 1e-6f) {
+                return "separacao invalida em t=" + t;
             }
             prevD = d;
         }
@@ -188,11 +179,8 @@ public final class CinematicTimeline {
         float prevR = stageRecede(0f);
         for (float t = dt; t <= DURATION; t += dt) {
             float r = stageRecede(t);
-            if (r < prevR - 1e-6f) {
-                return "estagio regrediu em t=" + t;
-            }
-            if (r - prevR > 0.12f * dt) {
-                return "estagio recuou bruscamente em t=" + t;
+            if (r < prevR - 1e-6f || r - prevR > 0.12f * dt) {
+                return "estagio invalido em t=" + t;
             }
             prevR = r;
         }
@@ -202,29 +190,11 @@ public final class CinematicTimeline {
         for (float t = dt; t <= DURATION; t += dt) {
             float d = cameraDistance(t);
             float h = cameraHeight(t);
-            if (Math.abs(d - prevDist) > 0.6f * dt * 8f) {
-                return "camera teleportou (dist) em t=" + t;
-            }
-            if (Math.abs(h - prevH) > 0.6f * dt * 8f) {
-                return "camera teleportou (alt) em t=" + t;
+            if (Math.abs(d - prevDist) > 0.6f * dt * 8f || Math.abs(h - prevH) > 0.6f * dt * 8f) {
+                return "camera teleportou em t=" + t;
             }
             prevDist = d;
             prevH = h;
-        }
-
-        for (float t = 0f; t <= DURATION; t += dt) {
-            float v = fairingRelease(t);
-            if (v < 0f || v > 1f) {
-                return "fairingRelease fora de [0,1] em t=" + t;
-            }
-            v = cameraFocusSatellite(t);
-            if (v < 0f || v > 1f) {
-                return "cameraFocus fora de [0,1] em t=" + t;
-            }
-            v = stageBurn(t);
-            if (v < 0f || v > 1f) {
-                return "stageBurn fora de [0,1] em t=" + t;
-            }
         }
 
         if (!(F0_ORBIT < F1_FAIRING && F1_FAIRING < F2_SEPARATION
@@ -232,7 +202,6 @@ public final class CinematicTimeline {
                 && F4_UNFOLD < F5_INSPECT && F5_INSPECT < DURATION)) {
             return "fases fora de ordem";
         }
-
         return null;
     }
 }

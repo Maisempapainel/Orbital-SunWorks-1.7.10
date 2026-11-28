@@ -1,6 +1,5 @@
 package com.orbitalsunworks.client.render;
 
-import java.awt.Color;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -12,14 +11,9 @@ import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
 /**
- * Gera texturas procedurais em alta resolução (32x32 para itens/blocos,
- * 512x512 para Terra/nuvens e sprite animado para o Carvão Energizado).
- *
- * Mantém intactos os PNGs originais de:
- *  - antennaT1 .. antennaT5
- *  - circuit
- *  - controlModule
- *  - solarPanelT1
+ * Gera texturas procedurais em alta resolução para itens, blocos da estação
+ * de controle, e o mapa esférico detalhado da Terra (1024x512) com nuvens
+ * esparsas e leves.
  */
 @SideOnly(Side.CLIENT)
 public final class OSTextureGenerator {
@@ -51,7 +45,7 @@ public final class OSTextureGenerator {
             makeAlloyIngot(0x525B78, 0x99A6CB, 0x262B3D, 0x00F0FF, 0xF2B938));
 
         // ------------------------------------------------------------------
-        // ITENS: Materiais especiais, módulos, manual e miniaturas
+        // ITENS: Materiais especiais, módulos, kits e foguetes
         // ------------------------------------------------------------------
         putPng(out, "textures/items/energizedCoal.png", makeEnergizedCoalSheet(16));
         out.put("textures/items/energizedCoal.png.mcmeta",
@@ -61,12 +55,29 @@ public final class OSTextureGenerator {
         putPng(out, "textures/items/carbonFiber.png", makeCarbonFiber());
         putPng(out, "textures/items/silicon.png", makeSilicon());
         putPng(out, "textures/items/manual.png", makeManual());
-        putPng(out, "textures/items/moduleDebrisShield.png", makeDebrisShieldModule());
+
+        putPng(out, "textures/items/moduleDebrisShield.png",
+            makeShieldModule(0x1680B8, 0x5EE8FF));
+        putPng(out, "textures/items/moduleDebrisShieldT2.png",
+            makeShieldModule(0x1F9E78, 0x7CFFBE));
+        putPng(out, "textures/items/moduleDebrisShieldT3.png",
+            makeShieldModule(0xC87A14, 0xFFE678));
+
+        putPng(out, "textures/items/moduleEfficiencyT1.png",
+            makeEfficiencyModule(0x227FD4, 0x62E2FF));
+        putPng(out, "textures/items/moduleEfficiencyT2.png",
+            makeEfficiencyModule(0x8B40D8, 0xE38AFF));
+        putPng(out, "textures/items/moduleEfficiencyT3.png",
+            makeEfficiencyModule(0xE07418, 0xFFEB6B));
+
+        putPng(out, "textures/items/repairKit.png", makeRepairKitIcon());
+        putPng(out, "textures/items/controlStation.png", makeControlStationItemIcon());
         putPng(out, "textures/items/rocketT1.png", makeRocketT1Icon());
         putPng(out, "textures/items/navRocket.png", makeNavRocketIcon());
+        putPng(out, "textures/items/dispersionRocket.png", makeDispersionRocketIcon());
 
         // ------------------------------------------------------------------
-        // BLOCOS DE CHÃO: 8 minérios + blocos tecnológicos (32x32)
+        // BLOCOS DE CHÃO: Minérios + Máquinas + Blocos da Estação
         // ------------------------------------------------------------------
         putPng(out, "textures/blocks/oreRedmeg.png",
             makeOreBlock(101, 0xC91F38, 0xFF6B80, 0x5E0B1A, true));
@@ -91,12 +102,26 @@ public final class OSTextureGenerator {
         putPng(out, "textures/blocks/blockCladded.png", makeCladdedBlock());
         putPng(out, "textures/blocks/blockCraftingStation.png", makeCraftingStationBlock());
         putPng(out, "textures/blocks/blockComputer.png", makeComputerBlock());
+        putPng(out, "textures/blocks/blockControlComputer.png", makeComputerBlock());
+        putPng(out, "textures/blocks/blockControlStation.png", makeControlStationCoreBlock());
+        putPng(out, "textures/blocks/blockAntennaPort.png", makeAntennaPortBlock());
+        putPng(out, "textures/blocks/blockAntennaTower.png", makeCladdedBlock());
+        putPng(out, "textures/blocks/blockTelescope.png", makeCladdedBlock());
+        putPng(out, "textures/blocks/blockDispersionRocket.png", makeCladdedBlock());
+        putPng(out, "textures/blocks/blockStationDoor.png", makeStationDoorIcon());
+        putPng(out, "textures/blocks/blockStationLamp.png", makeStationLampIcon());
+        putPng(out, "textures/blocks/blockControlMonitor.png", makeComputerBlock());
+        putPng(out, "textures/blocks/blockControlKeyboard.png", makeStationPartTex(0));
+
+        for (int m = 0; m < 8; m++) {
+            putPng(out, "textures/blocks/blockStationPart_" + m + ".png", makeStationPartTex(m));
+        }
 
         // ------------------------------------------------------------------
-        // AMBIENTE ORBITAL: Planeta Terra e nuvens (512x512 sem emenda)
+        // AMBIENTE ORBITAL: Planeta Terra realista 1024x512 e nuvens esparsas
         // ------------------------------------------------------------------
-        putPng(out, "textures/environment/earth.png", makeEarthTexture(512, 512));
-        putPng(out, "textures/environment/earth_clouds.png", makeEarthCloudsTexture(512, 512));
+        putPng(out, "textures/environment/earth.png", makeEarthTexture(1024, 512));
+        putPng(out, "textures/environment/earth_clouds.png", makeEarthCloudsTexture(1024, 512));
     }
 
     private static void putPng(Map<String, byte[]> out, String relPath, BufferedImage img) {
@@ -118,11 +143,9 @@ public final class OSTextureGenerator {
             for (int x = 0; x < 32; x++) {
                 float dx = x - 15.5f;
                 float dy = y - 15.5f;
-                // Forma isométrica de barraChanfrada
                 float u = (dx * 0.72f + dy * 1.15f);
                 float v = (dx * 0.65f - dy * 0.92f);
 
-                // Face superior e lateral isométrica clássica porém nítida em 32x32
                 float topDist = Math.max(Math.abs(u) / 13.0f, Math.abs(v) / 6.2f);
                 float frontDist = Math.max(Math.abs(u - 1.2f) / 13.0f, Math.abs(v + 3.2f) / 6.2f);
 
@@ -132,8 +155,6 @@ public final class OSTextureGenerator {
                     continue;
                 }
 
-                // Borda escura nítida
-                float edgeTop = Math.max(Math.abs(u) / 12.1f, Math.abs(v) / 5.3f);
                 float edgeFront = Math.max(Math.abs(u - 1.2f) / 12.1f, Math.abs(v + 3.2f) / 5.3f);
                 if (!inTop && frontDist > 0.90f && edgeFront > 1.0f) {
                     img.setRGB(x, y, mix(darkRgb, 0x090C12, 0.75f) | 0xFF000000);
@@ -146,7 +167,6 @@ public final class OSTextureGenerator {
 
                 int col;
                 if (inTop) {
-                    // Brilho metálico diagonal na face superior
                     float sheen = clamp01(1.0f - Math.abs((x + y) - 27.0f) / 8.5f);
                     float grain = (hash2D(x, y, 17) - 0.5f) * 0.08f;
                     float bevelHi = clamp01((0.92f - topDist) * 4.0f);
@@ -161,7 +181,6 @@ public final class OSTextureGenerator {
                         }
                     }
                 } else {
-                    // Face chanfrada frontal/inferior
                     float shade = clamp01((x - 6.0f) / 20.0f);
                     col = mix(baseRgb, darkRgb, 0.45f + shade * 0.42f);
                     if (v < -5.8f) {
@@ -171,7 +190,6 @@ public final class OSTextureGenerator {
                 img.setRGB(x, y, col | 0xFF000000);
             }
         }
-        // Reflexo especular pontual na quina esquerda
         setPx(img, 9, 13, mix(hiRgb, 0xFFFFFF, 0.55f));
         setPx(img, 10, 12, 0xFFFFFFFF);
         setPx(img, 11, 12, mix(hiRgb, 0xFFFFFF, 0.65f));
@@ -181,7 +199,6 @@ public final class OSTextureGenerator {
     private static BufferedImage makeAlloyIngot(int baseRgb, int hiRgb, int darkRgb,
             int stripeRgb, int rivetRgb) {
         BufferedImage img = makeIngot(baseRgb, hiRgb, darkRgb, stripeRgb, false);
-        // Faixa energética transversal e rebites aeroespaciais na barra
         for (int i = -4; i <= 4; i++) {
             int sx = 16 + i;
             int sy = 14 - (i / 2);
@@ -198,9 +215,6 @@ public final class OSTextureGenerator {
         return img;
     }
 
-    // ======================================================================
-    // CARVÃO ENERGIZADO ANIMADO (16 FRAMES x 32x32 = 32x512)
-    // ======================================================================
     private static BufferedImage makeEnergizedCoalSheet(int frames) {
         BufferedImage sheet = new BufferedImage(32, 32 * frames, BufferedImage.TYPE_INT_ARGB);
         for (int f = 0; f < frames; f++) {
@@ -212,7 +226,6 @@ public final class OSTextureGenerator {
                 for (int x = 0; x < 32; x++) {
                     float nx = (x - 15.5f) / 11.5f;
                     float ny = (y - 15.5f) / 11.5f;
-                    // Forma facetada irregular de carvão cristalino
                     float ang = (float) Math.atan2(ny, nx);
                     float facet = 1.0f + 0.14f * (float) Math.cos(ang * 5.0f + 0.6f)
                         + 0.08f * (float) Math.sin(ang * 3.0f - 0.9f);
@@ -221,7 +234,6 @@ public final class OSTextureGenerator {
                     if (dist > 1.08f) {
                         continue;
                     }
-                    // Halo energético externo suave
                     if (dist > 0.96f) {
                         float alpha = clamp01((1.08f - dist) / 0.12f) * (0.28f + 0.30f * pulse);
                         int halo = mix(0x00B8FF, 0xFF9C2E, pulse2 * 0.35f);
@@ -229,18 +241,15 @@ public final class OSTextureGenerator {
                         sheet.setRGB(x, f * 32 + y, (a << 24) | halo);
                         continue;
                     }
-                    // Borda cristalina escura
                     if (dist > 0.88f) {
                         sheet.setRGB(x, f * 32 + y, 0xFF0A0D12);
                         continue;
                     }
 
-                    // Facetas escuras de antracite + iluminação superior esquerda
                     float light = clamp01(0.55f - nx * 0.42f - ny * 0.48f);
                     float stepFacet = ((int) ((nx * 2.8f - ny * 2.2f) + 6.0f)) % 2 == 0 ? 0.08f : -0.04f;
                     int coalCol = mix(0x13171F, 0x353E4E, clamp01(light + stepFacet));
 
-                    // Fissuras elétricas ramificadas (veios ciano + âmbar pulsante)
                     float crackA = Math.abs(nx * 0.72f + ny * 0.68f - 0.10f * (float) Math.sin(ny * 4.5f));
                     float crackB = Math.abs(nx * 0.55f - ny * 0.85f + 0.12f * (float) Math.cos(nx * 5.0f));
                     float coreDist = (float) Math.sqrt(nx * nx * 1.2f + ny * ny * 1.2f);
@@ -268,14 +277,10 @@ public final class OSTextureGenerator {
         return sheet;
     }
 
-    // ======================================================================
-    // FIBRA DE CARBONO, SILÍCIO, MANUAL E ESCUDO DE DETRITO (32x32)
-    // ======================================================================
     private static BufferedImage makeCarbonFiber() {
         BufferedImage img = new BufferedImage(32, 32, BufferedImage.TYPE_INT_ARGB);
         for (int y = 4; y <= 27; y++) {
             for (int x = 4; x <= 27; x++) {
-                // Corte diagonal chanfrado nos cantos para parecer placa de compósito
                 if ((x + y) < 11 || (x + y) > 51) {
                     continue;
                 }
@@ -284,7 +289,6 @@ public final class OSTextureGenerator {
                     img.setRGB(x, y, 0xFF10151D);
                     continue;
                 }
-                // Trama diagonal 2x2 de fibra de carbono
                 int pattern = ((x / 2) + (y / 2)) & 1;
                 boolean warp = ((x + y) % 4) < 2;
                 int base = pattern == 0 ? (warp ? 0x262C36 : 0x1D222B) : (warp ? 0x363F4D : 0x2B333F);
@@ -313,7 +317,6 @@ public final class OSTextureGenerator {
                     img.setRGB(x, y, 0xFF0C1422);
                     continue;
                 }
-                // Wafer semicondutor escuro azulado com brilho iridescente e trilhas microscópicas
                 float grad = clamp01(1.0f - ((x + y) - 10.0f) / 38.0f);
                 int col = mix(0x162438, 0x3D6A9C, grad);
                 if ((x % 4 == 0 && y > 8 && y < 24) || (y % 4 == 0 && x > 8 && x < 24)) {
@@ -342,7 +345,6 @@ public final class OSTextureGenerator {
                     img.setRGB(x, y, 0xFF0A101B);
                     continue;
                 }
-                // Lombada metálica esquerda + capa azul espacial + fecho dourado
                 int col;
                 if (x <= 8) {
                     col = mix(0x283A52, 0x4A6484, (float) (x - 5) / 3.0f);
@@ -356,7 +358,6 @@ public final class OSTextureGenerator {
                         col = mix(col, 0x3D7EB3, 0.65f);
                     }
                 }
-                // Emblema holográfico central (órbita ciano + planeta)
                 float ex = (x - 17.5f);
                 float ey = (y - 15.0f);
                 float r = (float) Math.sqrt(ex * ex + ey * ey);
@@ -366,7 +367,6 @@ public final class OSTextureGenerator {
                 } else if (ring < 0.85f) {
                     col = 0xFF55E0FF;
                 }
-                // Fecho dourado à direita
                 if (x >= 23 && y >= 13 && y <= 17) {
                     col = (y == 15) ? 0xFFFFE788 : 0xFFD9A12B;
                 }
@@ -376,7 +376,7 @@ public final class OSTextureGenerator {
         return img;
     }
 
-    private static BufferedImage makeDebrisShieldModule() {
+    private static BufferedImage makeShieldModule(int darkAccent, int brightAccent) {
         BufferedImage img = new BufferedImage(32, 32, BufferedImage.TYPE_INT_ARGB);
         for (int y = 4; y <= 27; y++) {
             for (int x = 4; x <= 27; x++) {
@@ -389,22 +389,19 @@ public final class OSTextureGenerator {
                     img.setRGB(x, y, 0xFF0B111A);
                     continue;
                 }
-                // Placa de titânio
                 int col = mix(0x3B485E, 0x202938, clamp01((x + y - 8.0f) / 38.0f));
                 if (x == 5 || x == 26 || y == 5 || y == 26) {
                     col = 0xFF6B819E;
                 }
-                // Pinos dourados inferiores
                 if (y >= 25 && (x % 3 == 0) && x >= 9 && x <= 22) {
                     col = 0xFFF2BE46;
                 }
-                // Emblema hexagonal de escudo ciano brilhante no centro
                 float sd = Math.max(Math.abs(dx) * 1.05f, Math.abs(dx) * 0.55f + (y - 15.0f) * 0.72f);
                 if (dy < 7.0f && sd < 7.0f) {
                     if (sd > 5.3f || Math.abs(dy - 6.0f) < 0.8f) {
-                        col = 0xFF6FF3FF;
+                        col = brightAccent;
                     } else {
-                        col = mix(0x0D6F96, 0x35DCFF, clamp01(1.0f - sd / 6.0f));
+                        col = mix(darkAccent, brightAccent, clamp01(1.0f - sd / 6.0f));
                     }
                 }
                 img.setRGB(x, y, col | 0xFF000000);
@@ -413,35 +410,108 @@ public final class OSTextureGenerator {
         return img;
     }
 
-    // ======================================================================
-    // MINIATURAS DOS FOGUETES (32x32)
-    // ======================================================================
+    private static BufferedImage makeEfficiencyModule(int darkAccent, int brightAccent) {
+        BufferedImage img = new BufferedImage(32, 32, BufferedImage.TYPE_INT_ARGB);
+        for (int y = 4; y <= 27; y++) {
+            for (int x = 4; x <= 27; x++) {
+                float dx = Math.abs(x - 15.5f);
+                float dy = Math.abs(y - 15.5f);
+                if (dx + dy > 19.5f) {
+                    continue;
+                }
+                if (dx + dy > 18.2f || x == 4 || x == 27 || y == 4 || y == 27) {
+                    img.setRGB(x, y, 0xFF0B111A);
+                    continue;
+                }
+                int col = mix(0x2D384B, 0x18212E, clamp01((x + y - 8.0f) / 38.0f));
+                if (x == 5 || x == 26 || y == 5 || y == 26) {
+                    col = mix(0x6B819E, brightAccent, 0.25f);
+                }
+                if (y >= 25 && (x % 3 == 0) && x >= 9 && x <= 22) {
+                    col = 0xFFF2BE46;
+                }
+                // Raio fotovoltaico estilizado no centro
+                float rx = x - 15.5f;
+                float ry = y - 15.5f;
+                boolean bolt = (ry >= -6.5f && ry <= 0.5f && rx >= -1.2f - ry * 0.45f && rx <= 2.4f - ry * 0.45f)
+                    || (ry >= -0.5f && ry <= 6.5f && rx >= -2.4f - ry * 0.45f && rx <= 1.2f - ry * 0.45f);
+                if (bolt) {
+                    col = mix(darkAccent, brightAccent, clamp01(0.75f - ry / 12.0f));
+                }
+                img.setRGB(x, y, col | 0xFF000000);
+            }
+        }
+        return img;
+    }
+
+    private static BufferedImage makeRepairKitIcon() {
+        BufferedImage img = new BufferedImage(32, 32, BufferedImage.TYPE_INT_ARGB);
+        for (int y = 6; y <= 26; y++) {
+            for (int x = 4; x <= 27; x++) {
+                if (y <= 9 && (x < 10 || x > 21)) continue;
+                if (y <= 9 && y >= 7 && x >= 11 && x <= 20 && y == 8) continue;
+                boolean border = (x == 4 || x == 27 || y == 26 || (y == 10 && (x < 10 || x > 21)) || y == 6);
+                if (border) {
+                    img.setRGB(x, y, 0xFF0E141D);
+                    continue;
+                }
+                int col = y <= 9 ? 0x627389 : mix(0x2A3647, 0x45566E, clamp01(1f - (y - 10) / 16f));
+                if (y == 13 && x > 5 && x < 26) col = 0xFF28D6FF;
+                boolean cross = (Math.abs(x - 15.5f) <= 1.6f && Math.abs(y - 19.0f) <= 4.0f)
+                    || (Math.abs(y - 19.0f) <= 1.6f && Math.abs(x - 15.5f) <= 4.0f);
+                if (cross) {
+                    col = 0xFF52FF85;
+                }
+                img.setRGB(x, y, col | 0xFF000000);
+            }
+        }
+        return img;
+    }
+
+    private static BufferedImage makeControlStationItemIcon() {
+        BufferedImage img = new BufferedImage(32, 32, BufferedImage.TYPE_INT_ARGB);
+        for (int y = 4; y <= 27; y++) {
+            for (int x = 4; x <= 27; x++) {
+                float dx = Math.abs(x - 15.5f);
+                float dy = Math.abs(y - 15.5f);
+                if (dx + dy > 20f) continue;
+                boolean border = (dx + dy > 18.5f || x == 4 || x == 27 || y == 4 || y == 27);
+                if (border) {
+                    img.setRGB(x, y, 0xFF0B121D);
+                    continue;
+                }
+                int col = mix(0x283546, 0x4B5F78, clamp01(1f - dy / 12f));
+                if (y >= 8 && y <= 16 && x >= 8 && x <= 23) {
+                    col = 0x0C1A29;
+                    if (y == 12 && x >= 10 && x <= 21) col = 0x3AE6FF;
+                }
+                if (y >= 19 && y <= 24 && x >= 13 && x <= 18) {
+                    col = 0xFF22A8D8;
+                }
+                img.setRGB(x, y, col | 0xFF000000);
+            }
+        }
+        return img;
+    }
+
     private static BufferedImage makeRocketT1Icon() {
         BufferedImage img = new BufferedImage(32, 32, BufferedImage.TYPE_INT_ARGB);
-        // Rotacionado em 45° (apontando para cima-direita)
         for (int y = 0; y < 32; y++) {
             for (int x = 0; x < 32; x++) {
-                // Eixo longitudinal s: -12 (bocal) .. +13 (ponta)
                 float s = ((x - 15.5f) + (15.5f - y)) * 0.7071f;
-                // Eixo lateral p: distância perpendicular ao eixo
                 float p = ((x - 15.5f) - (15.5f - y)) * 0.7071f;
                 float ap = Math.abs(p);
 
-                int col = 0;
-                // Chama sutil de ignição na base
+                int col;
                 if (s >= -14.2f && s < -9.8f && ap < (2.4f - (-9.8f - s) * 0.45f)) {
                     float t = clamp01((s + 14.2f) / 4.4f);
                     col = mix(0xFF731E, 0xFFF288, t);
                     img.setRGB(x, y, col | 0xFF000000);
                     continue;
                 }
-                // Aletas laterais na cauda
                 boolean fin = s >= -9.8f && s <= -3.5f && ap >= 2.6f && ap <= (6.2f - (s + 9.8f) * 0.55f);
-                // Propulsor / bocal escuro
                 boolean nozzle = s >= -10.2f && s < -8.0f && ap <= (2.3f - (s + 10.2f) * 0.15f);
-                // Fuselagem principal
                 boolean body = s >= -8.0f && s <= 6.2f && ap <= 3.1f;
-                // Coifa / ogiva dourada no topo
                 float coneHalf = Math.max(0.0f, (13.2f - s) * 0.46f);
                 boolean nose = s > 6.2f && s <= 13.2f && ap <= coneHalf;
 
@@ -459,7 +529,6 @@ public final class OSTextureGenerator {
                         col = mix(col, 0x261B0A, 0.65f);
                     }
                 } else {
-                    // Corpo metálico branco/titânio com sombra na direita e faixa ciano
                     float shade = clamp01(0.55f - p / 5.0f);
                     col = mix(0x8899AD, 0xF5FAFF, shade);
                     if (s >= 2.2f && s <= 4.0f) {
@@ -477,6 +546,23 @@ public final class OSTextureGenerator {
         return img;
     }
 
+    private static BufferedImage makeDispersionRocketIcon() {
+        BufferedImage img = makeRocketT1Icon();
+        for (int y = 0; y < 32; y++) {
+            for (int x = 0; x < 32; x++) {
+                int argb = img.getRGB(x, y);
+                if ((argb >>> 24) == 0) continue;
+                float s = ((x - 15.5f) + (15.5f - y)) * 0.7071f;
+                if (s > 5.8f) {
+                    img.setRGB(x, y, mix(argb & 0xFFFFFF, 0xFF4F30, 0.65f) | 0xFF000000);
+                } else if (s >= 1.5f && s <= 4.2f) {
+                    img.setRGB(x, y, 0xFFFF9830);
+                }
+            }
+        }
+        return img;
+    }
+
     private static BufferedImage makeNavRocketIcon() {
         BufferedImage img = new BufferedImage(32, 32, BufferedImage.TYPE_INT_ARGB);
         for (int y = 0; y < 32; y++) {
@@ -485,8 +571,7 @@ public final class OSTextureGenerator {
                 float p = ((x - 15.5f) - (15.5f - y)) * 0.7071f;
                 float ap = Math.abs(p);
 
-                int col = 0;
-                // Brilho iônico azul-ciano duplo na base
+                int col;
                 if (s >= -13.8f && s < -9.8f && ap >= 0.5f && ap <= 2.9f) {
                     float t = clamp01((s + 13.8f) / 4.0f);
                     col = mix(0x1075B8, 0x8AF7FF, t);
@@ -496,7 +581,6 @@ public final class OSTextureGenerator {
                 boolean fin = s >= -9.8f && s <= -2.0f && ap >= 2.8f && ap <= (6.8f - (s + 9.8f) * 0.48f);
                 boolean thruster = s >= -10.2f && s < -7.5f && ap <= 3.3f;
                 boolean body = s >= -7.5f && s <= 4.5f && ap <= 3.0f;
-                // Cápsula tripulada larga + ponta cônica
                 float capHalf = s <= 7.8f ? 3.6f : Math.max(0.0f, (13.2f - s) * 0.67f);
                 boolean capsule = s > 4.5f && s <= 13.2f && ap <= capHalf;
 
@@ -510,11 +594,10 @@ public final class OSTextureGenerator {
                 } else if (capsule) {
                     float shade = clamp01(0.55f - p / 5.0f);
                     col = mix(0x8899AD, 0xFFFFFF, shade);
-                    // Visor panorâmico ciano na cápsula
                     if (s >= 6.4f && s <= 9.2f && ap <= 2.0f) {
                         col = mix(0x0E8BB8, 0x7CF5FF, shade + 0.2f);
                     } else if (s >= 4.5f && s <= 5.5f) {
-                        col = 0xFF394250; // escudo térmico
+                        col = 0xFF394250;
                     }
                     if (ap > capHalf - 0.85f) {
                         col = mix(col, 0x1A222E, 0.72f);
@@ -536,11 +619,10 @@ public final class OSTextureGenerator {
     }
 
     // ======================================================================
-    // BLOCOS DE CHÃO (MINÉRIOS E MÁQUINAS 32x32)
+    // BLOCOS DE CHÃO (MINÉRIOS, MÁQUINAS E ESTAÇÃO 32x32)
     // ======================================================================
     private static BufferedImage makeOreBlock(int seed, int oreMain, int oreHi, int oreDark, boolean glowing) {
         BufferedImage img = makeStoneBase(seed);
-        // 7 bolsas minerais facetadas distribuídas sem cortar nas bordas
         int[][] pockets = {
             { 7, 8, 4 }, { 21, 7, 5 }, { 13, 16, 5 }, { 25, 19, 4 },
             { 7, 24, 4 }, { 18, 26, 4 }, { 14, 6, 3 }
@@ -561,7 +643,6 @@ public final class OSTextureGenerator {
                         }
                         img.setRGB(x, y, c | 0xFF000000);
                     } else if (d <= rad * 1.05f) {
-                        // Cavidade escura na pedra ao redor do minério
                         int stone = img.getRGB(x, y);
                         int cavity = mix(stone & 0xFFFFFF, oreDark, 0.55f);
                         img.setRGB(x, y, mix(cavity, 0x2A2D34, 0.45f) | 0xFF000000);
@@ -639,7 +720,6 @@ public final class OSTextureGenerator {
                 } else {
                     float grad = clamp01((x + y - 8.0f) / 48.0f);
                     col = mix(0x74869B, 0x4E5C6E, grad);
-                    // X discreto estrutural + detalhe central
                     if (Math.abs(x - y) <= 0 || Math.abs((31 - x) - y) <= 0) {
                         col = mix(col, 0x354150, 0.45f);
                     }
@@ -653,7 +733,6 @@ public final class OSTextureGenerator {
                 img.setRGB(x, y, col | 0xFF000000);
             }
         }
-        // Rebites metálicos nos 4 cantos
         int[] pts = { 5, 26 };
         for (int px : pts) {
             for (int py : pts) {
@@ -677,7 +756,6 @@ public final class OSTextureGenerator {
                     img.setRGB(x, y, 0xFF101722);
                     continue;
                 }
-                // Painel de trabalho escuro com grade holográfica 3x5 ciano
                 int col = 0x162130;
                 if (x >= 6 && x <= 25 && y >= 7 && y <= 18) {
                     col = 0x0C141F;
@@ -687,15 +765,10 @@ public final class OSTextureGenerator {
                         col = 0x132638;
                     }
                 } else if (y >= 21 && y <= 25 && x >= 6 && x <= 25) {
-                    // Barra de status inferior + LEDs
                     col = 0x243244;
-                    if (y == 23 && x >= 8 && x <= 19) {
-                        col = 0x3EE5FF;
-                    } else if (y == 23 && x == 22) {
-                        col = 0x66FF7A;
-                    } else if (y == 23 && x == 24) {
-                        col = 0xFFCA42;
-                    }
+                    if (y == 23 && x >= 8 && x <= 19) col = 0x3EE5FF;
+                    else if (y == 23 && x == 22) col = 0x66FF7A;
+                    else if (y == 23 && x == 24) col = 0xFFCA42;
                 }
                 img.setRGB(x, y, col | 0xFF000000);
             }
@@ -713,20 +786,13 @@ public final class OSTextureGenerator {
                     continue;
                 }
                 int col = 0x1A222E;
-                // Tela de telemetria superior
                 if (x >= 5 && x <= 26 && y >= 5 && y <= 17) {
                     col = 0x09131E;
-                    if (x == 5 || x == 26 || y == 5 || y == 17) {
-                        col = 0x354B63;
-                    } else if (y == 9 && x >= 8 && x <= 21) {
-                        col = 0x38E4FF;
-                    } else if (y == 12 && x >= 8 && x <= 17) {
-                        col = 0x52FF85;
-                    } else if (y == 14 && x >= 8 && x <= 23) {
-                        col = 0x2899C4;
-                    }
+                    if (x == 5 || x == 26 || y == 5 || y == 17) col = 0x354B63;
+                    else if (y == 9 && x >= 8 && x <= 21) col = 0x38E4FF;
+                    else if (y == 12 && x >= 8 && x <= 17) col = 0x52FF85;
+                    else if (y == 14 && x >= 8 && x <= 23) col = 0x2899C4;
                 } else if (x >= 5 && x <= 26 && y >= 20 && y <= 26) {
-                    // Grades de ventilação + LEDs frontais
                     if (x <= 18) {
                         col = (y % 2 == 0) ? 0x10161F : 0x2F3B4A;
                     } else {
@@ -743,14 +809,121 @@ public final class OSTextureGenerator {
         return img;
     }
 
+    private static BufferedImage makeControlStationCoreBlock() {
+        BufferedImage img = makeComputerBlock();
+        for (int x = 10; x <= 21; x++) {
+            setPx(img, x, 11, 0xFF55F0FF);
+        }
+        return img;
+    }
+
+    private static BufferedImage makeAntennaPortBlock() {
+        BufferedImage img = new BufferedImage(32, 32, BufferedImage.TYPE_INT_ARGB);
+        for (int y = 0; y < 32; y++) {
+            for (int x = 0; x < 32; x++) {
+                boolean border = (x <= 2 || x >= 29 || y <= 2 || y >= 29);
+                int col = border ? 0x283240 : 0x18212C;
+                float d = (float) Math.hypot(x - 15.5, y - 15.5);
+                if (d < 9.5f && d > 6.0f) {
+                    col = 0xFFAE28;
+                } else if (d <= 6.0f) {
+                    col = (d < 3.0f) ? 0x3CEBFF : 0x114E6E;
+                }
+                img.setRGB(x, y, col | 0xFF000000);
+            }
+        }
+        return img;
+    }
+
+    private static BufferedImage makeStationDoorIcon() {
+        BufferedImage img = new BufferedImage(32, 32, BufferedImage.TYPE_INT_ARGB);
+        for (int y = 2; y < 30; y++) {
+            for (int x = 5; x < 27; x++) {
+                boolean frame = (x <= 7 || x >= 24 || y <= 4 || y >= 28);
+                int col = frame ? 0x2F3B4A : 0x526378;
+                if (!frame && (x == 15 || x == 16)) col = 0x121A24;
+                if (!frame && (x == 14 || x == 17) && y >= 10 && y <= 21) col = 0x2EE6FF;
+                img.setRGB(x, y, col | 0xFF000000);
+            }
+        }
+        return img;
+    }
+
+    private static BufferedImage makeStationLampIcon() {
+        BufferedImage img = new BufferedImage(32, 32, BufferedImage.TYPE_INT_ARGB);
+        for (int y = 9; y < 23; y++) {
+            for (int x = 4; x < 28; x++) {
+                boolean border = (x <= 5 || x >= 26 || y <= 10 || y >= 21);
+                int col = border ? 0x2E3B4B : mix(0x70EFFF, 0xFFFFFF, clamp01(1f - Math.abs(y - 15.5f) / 5f));
+                img.setRGB(x, y, col | 0xFF000000);
+            }
+        }
+        return img;
+    }
+
+    private static BufferedImage makeStationPartTex(int meta) {
+        BufferedImage img = new BufferedImage(32, 32, BufferedImage.TYPE_INT_ARGB);
+        if (meta == 4) {
+            // Vidro de observação fumê azulado com reflexo sutil e borda metálica fina
+            for (int y = 0; y < 32; y++) {
+                for (int x = 0; x < 32; x++) {
+                    if (x == 0 || x == 31 || y == 0 || y == 31) {
+                        img.setRGB(x, y, 0xD0263547);
+                    } else if (Math.abs((x - y) + 6) <= 1 || Math.abs((x - y) - 9) <= 0) {
+                        img.setRGB(x, y, 0x55A8E8FF);
+                    } else {
+                        img.setRGB(x, y, 0x4216324A);
+                    }
+                }
+            }
+            return img;
+        }
+        for (int y = 0; y < 32; y++) {
+            for (int x = 0; x < 32; x++) {
+                boolean border = (x == 0 || x == 31 || y == 0 || y == 31);
+                boolean inner = (x == 2 || x == 29 || y == 2 || y == 29);
+                int col;
+                if (meta == 1) {
+                    // Liga aeroespacial clara (paredes internas)
+                    col = border ? 0x627182 : (inner ? 0x9AA8B8 : mix(0xCCD6E2, 0xB4C1D0, (x + y) / 64f));
+                } else if (meta == 2) {
+                    // Faixa luminosa ciano
+                    col = border ? 0x203447 : (y >= 11 && y <= 20 ? 0x2EE8FF : 0x1A293A);
+                } else if (meta == 3) {
+                    // Piso técnico antiderrapante
+                    int tile = ((x / 8) + (y / 8)) & 1;
+                    col = border ? 0x1B232E : (tile == 0 ? 0x303B4A : 0x293341);
+                    if ((x % 8 == 0 || y % 8 == 0) && !border) col = 0x1E2632;
+                } else if (meta == 5) {
+                    // Pilar estrutural escuro chanfrado
+                    col = border ? 0x161D26 : ((x <= 4 || x >= 27) ? 0x425164 : 0x2A3442);
+                    if (y == 15 || y == 16) col = mix(col, 0x20B8E8, 0.5f);
+                } else if (meta == 6) {
+                    // Telhado nervurado high-tech (aletas de ventilação/solar)
+                    col = border ? 0x19222E : ((y % 4 == 0) ? 0x1C2838 : 0x35465B);
+                    if (y % 4 == 1 && x > 4 && x < 27) col = 0x26547C;
+                } else if (meta == 7) {
+                    // Rodapé/degrau reforçado
+                    col = border ? 0x1B2430 : mix(0x455365, 0x5D6F86, 1f - y / 32f);
+                    if (y >= 26) col = 0x26A8D6;
+                } else {
+                    // meta == 0: Carapaça externa titânio escuro
+                    col = border ? 0x1B232E : (inner ? 0x2D3947 : mix(0x47566B, 0x354152, (x + y) / 64f));
+                }
+                img.setRGB(x, y, col | 0xFF000000);
+            }
+        }
+        return img;
+    }
+
     // ======================================================================
-    // TEXTURA PROCEDURAL REALISTA DA TERRA E NUVENS (512x512 SEM EMENDAS)
+    // TEXTURA PROCEDURAL REALISTA DA TERRA (1024x512) E NUVENS ESPARSAS
     // ======================================================================
     private static BufferedImage makeEarthTexture(int w, int h) {
         BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
         for (int y = 0; y < h; y++) {
             double v = (y + 0.5) / h;
-            double lat = (v - 0.5) * Math.PI; // -pi/2 .. +pi/2
+            double lat = (v - 0.5) * Math.PI;
             double cosLat = Math.cos(lat);
             double sinLat = Math.sin(lat);
             double absLat = Math.abs(sinLat);
@@ -759,49 +932,78 @@ public final class OSTextureGenerator {
                 double u = (x + 0.5) / w;
                 double lon = u * Math.PI * 2.0;
 
-                // Coordenadas 3D contínuas na esfera => zero emenda em u=0/1
                 double sx = cosLat * Math.cos(lon);
                 double sy = sinLat;
                 double sz = cosLat * Math.sin(lon);
 
-                double cont = fbm3D(sx * 1.85 + 3.1, sy * 1.85 - 1.7, sz * 1.85 + 0.8, 5);
-                double detail = fbm3D(sx * 7.2 - 2.0, sy * 7.2 + 4.3, sz * 7.2 - 1.5, 4);
-                double elev = cont * 0.78 + detail * 0.22 - 0.49;
+                // Distorção tectônica (domain warp) para formar continentes recortados e penínsulas
+                double wx = fbm3D(sx * 2.2 + 1.3, sy * 2.2 - 0.7, sz * 2.2 + 2.5, 3) - 0.5;
+                double wy = fbm3D(sx * 2.2 - 4.1, sy * 2.2 + 3.2, sz * 2.2 - 1.8, 3) - 0.5;
+                double wz = fbm3D(sx * 2.2 + 5.7, sy * 2.2 + 0.9, sz * 2.2 - 4.4, 3) - 0.5;
 
-                // Calotas polares onduladas
-                double iceThresh = 0.81 + (detail - 0.5) * 0.14;
+                double px = sx + wx * 0.44;
+                double py = sy + wy * 0.44;
+                double pz = sz + wz * 0.44;
+
+                double macro = (fbm3D(px * 2.45 + 3.8, py * 2.45 - 1.9, pz * 2.45 + 1.1, 5) - 0.50) * 3.1;
+                double coast = (fbm3D(px * 7.6 - 2.3, py * 7.6 + 4.4, pz * 7.6 - 1.9, 4) - 0.50) * 1.45;
+                double arch = Math.max(0.0,
+                    (fbm3D(sx * 11.2 + 8.5, sy * 11.2 - 4.1, sz * 11.2 + 2.3, 3) - 0.555) * 2.4);
+
+                double elev = macro * 0.70 + coast * 0.28 + arch * 0.20 - 0.085;
+
+                // Calotas polares discretas apenas nos extremos dos polos
+                double iceThresh = 0.875 + coast * 0.045;
                 int col;
                 if (absLat > iceThresh) {
-                    col = mix(0xDCEAF5, 0xF7FBFF, clamp01((float) ((absLat - iceThresh) / 0.12)));
+                    col = mix(0xCBE2F2, 0xF5FAFF, clamp01((float) ((absLat - iceThresh) / 0.07)));
                 } else if (elev < 0.0) {
-                    // Oceanos profundos -> plataforma continental turquesa
-                    float depth = clamp01((float) (-elev / 0.24));
-                    float shelf = clamp01((float) (1.0 + elev / 0.055));
-                    col = mix(0x0D4B8C, 0x061E45, depth);
-                    if (shelf > 0.0f) {
-                        col = mix(col, 0x2088BA, shelf * 0.72f);
-                    }
-                } else {
-                    // Continentes: florestas tropicais, savana, desertos subtropicais e cordilheiras
-                    double moisture = fbm3D(sx * 2.9 - 5.4, sy * 2.9 + 2.1, sz * 2.9 + 6.2, 3);
-                    double aridBand = Math.exp(-Math.pow((absLat - 0.36) / 0.22, 2.0));
-                    double aridity = clamp01((float) (aridBand * 0.68 + (0.55 - moisture) * 0.75));
-
-                    int lush = mix(0x1D5C2B, 0x3D803A, clamp01((float) detail));
-                    int desert = mix(0xC29F5D, 0xDFC484, clamp01((float) detail));
-                    col = mix(lush, desert, (float) aridity);
-
-                    // Cadeias montanhosas e picos nevados
-                    if (elev > 0.13) {
-                        float mt = clamp01((float) ((elev - 0.13) / 0.14));
-                        col = mix(col, 0x7A7369, mt * 0.85f);
-                        if (elev > 0.22) {
-                            col = mix(col, 0xEEF5FC, clamp01((float) ((elev - 0.22) / 0.06)));
+                    // Oceano profundo -> mar aberto -> plataforma costeira -> recife turquesa
+                    float depth = clamp01((float) (-elev / 0.34));
+                    col = mix(0x0B4A8B, 0x04173B, depth);
+                    if (elev > -0.075) {
+                        float shelf = clamp01((float) ((elev + 0.075) / 0.075));
+                        col = mix(col, 0x1A7CB3, shelf * 0.75f);
+                        if (elev > -0.025) {
+                            float reef = clamp01((float) ((elev + 0.025) / 0.025));
+                            col = mix(col, 0x2DC7D4, reef * 0.65f);
                         }
                     }
+                } else {
+                    // Continentes diversificados: florestas tropicais, savanas, desertos, montanhas
+                    double mRaw = fbm3D(px * 3.6 - 5.4, py * 3.6 + 2.7, pz * 3.6 + 6.1, 4);
+                    float moisture = clamp01((float) ((mRaw - 0.35) / 0.32));
+                    double ridgeNoise = 1.0 - Math.abs(fbm3D(px * 9.8 + 1.6, py * 9.8 - 2.9, pz * 9.8 + 4.3, 3) - 0.5) * 2.0;
+
+                    double subTrop = Math.exp(-Math.pow((absLat - 0.33) / 0.20, 2.0));
+                    float aridity = clamp01((float) (subTrop * 0.65 + (0.58 - moisture) * 0.80));
+
+                    int rainforest = mix(0x164C22, 0x2A6B30, clamp01((float) (0.5 + coast * 0.35)));
+                    int grassland = mix(0x3D6E33, 0x5C8542, clamp01(moisture));
+                    int veg = mix(grassland, rainforest, clamp01((float) (1.0 - absLat * 1.6) * moisture));
+                    int desert = mix(0xB89356, 0xE2C78B, clamp01((float) (0.5 + coast * 0.35)));
+
+                    col = mix(veg, desert, aridity);
+
+                    // Florestas boreais em latitudes médias-altas
+                    if (absLat > 0.54) {
+                        float boreal = clamp01((float) ((absLat - 0.54) / 0.16));
+                        col = mix(col, 0x2E4F34, boreal * 0.75f);
+                    }
                     // Tundra subpolar
-                    if (absLat > 0.62) {
-                        col = mix(col, 0x7D8C7E, clamp01((float) ((absLat - 0.62) / 0.18)));
+                    if (absLat > 0.72) {
+                        float tundra = clamp01((float) ((absLat - 0.72) / 0.14));
+                        col = mix(col, 0x7A8476, tundra * 0.85f);
+                    }
+
+                    // Cordilheiras e picos nevados
+                    double mountain = elev * 0.8 + Math.max(0.0, ridgeNoise - 0.55) * 0.35;
+                    if (mountain > 0.20) {
+                        float mt = clamp01((float) ((mountain - 0.20) / 0.16));
+                        col = mix(col, 0x6E655B, mt * 0.88f);
+                        if (mountain > 0.31) {
+                            col = mix(col, 0xEEF6FC, clamp01((float) ((mountain - 0.31) / 0.08)));
+                        }
                     }
                 }
                 img.setRGB(x, y, col | 0xFF000000);
@@ -822,20 +1024,22 @@ public final class OSTextureGenerator {
                 double u = (x + 0.5) / w;
                 double lon = u * Math.PI * 2.0;
 
-                // Cisalhamento leve simulando ventos alísios
-                double swirl = sinLat * 0.55;
+                double sx0 = cosLat * Math.cos(lon);
+                double sz0 = cosLat * Math.sin(lon);
+                double swirl = sinLat * 0.85 + (fbm3D(sx0 * 2.5, sinLat * 2.5, sz0 * 2.5, 2) - 0.5) * 0.85;
                 double sx = cosLat * Math.cos(lon + swirl);
                 double sy = sinLat;
                 double sz = cosLat * Math.sin(lon + swirl);
 
-                double c = fbm3D(sx * 3.1 + 7.4, sy * 4.2 - 3.0, sz * 3.1 + 1.9, 5);
-                double wisp = fbm3D(sx * 8.5 - 1.2, sy * 8.5 + 5.1, sz * 8.5 - 4.4, 3);
-                double density = (c * 0.72 + wisp * 0.28) - 0.50;
+                double c = fbm3D(sx * 3.6 + 7.4, sy * 4.8 - 3.0, sz * 3.6 + 1.9, 5);
+                double wisp = fbm3D(sx * 10.5 - 1.2, sy * 10.5 + 5.1, sz * 10.5 - 4.4, 3);
+                // Limiar alto (0.565) garante nuvens bem espalhadas e translúcidas sem cobrir o planeta
+                double density = (c * 0.72 + wisp * 0.28) - 0.565;
                 if (density <= 0.0) {
                     continue;
                 }
-                int alpha = (int) clamp((float) (density / 0.26 * 225.0), 0, 225);
-                img.setRGB(x, y, (alpha << 24) | 0xF5FAFF);
+                int alpha = (int) clamp((float) (density / 0.18 * 148.0), 0, 148);
+                img.setRGB(x, y, (alpha << 24) | 0xF4F9FF);
             }
         }
         return img;

@@ -12,6 +12,7 @@ import net.minecraft.world.World;
 
 import com.orbitalsunworks.OSBlocks;
 import com.orbitalsunworks.OSItems;
+import com.orbitalsunworks.item.ItemDispersionRocket;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
@@ -127,7 +128,7 @@ public class BlockLaunchPlatform extends BlockContainer {
         for (int dx = -3; dx <= 3; dx++) {
             for (int dz = -3; dz <= 3; dz++) {
                 if (isCompleteStructure(world, x + dx, y, z + dz)) {
-                    return new int[]{x + dx, y, z + dz};
+                    return new int[] { x + dx, y, z + dz };
                 }
             }
         }
@@ -275,8 +276,21 @@ public class BlockLaunchPlatform extends BlockContainer {
                     player.setCurrentItemOrArmor(0, null);
                 }
             }
-            com.orbitalsunworks.util.OSUtils.sendChat(player, "\u00a7aFoguete Tier 1 posicionado! Clique nele para abrir o painel.");
+            com.orbitalsunworks.util.OSUtils.sendChat(player,
+                "\u00a7aFoguete Tier 1 posicionado! Clique nele para abrir o painel.");
             return true;
+        }
+
+        if (held != null && held.getItem() == OSItems.itemDispersionRocket) {
+            if (world.isRemote) {
+                return true;
+            }
+            int[] center = findCenter(world, x, y, z);
+            if (center == null) {
+                com.orbitalsunworks.util.OSUtils.sendChat(player, "\u00a7cA plataforma 7x7 precisa estar completa!");
+                return true;
+            }
+            return ItemDispersionRocket.tryPlaceOnCenter(world, center[0], center[1], center[2], player, held);
         }
 
         if (held == null) {
@@ -294,6 +308,13 @@ public class BlockLaunchPlatform extends BlockContainer {
                     if (!world.isRemote) {
                         player.openGui(com.orbitalsunworks.OrbitalSunworks.instance,
                             com.orbitalsunworks.handler.GuiHandler.ID_ROCKET, world, center[0], center[1] + 1, center[2]);
+                    }
+                    return true;
+                }
+                if (above == OSBlocks.blockDispersionRocket) {
+                    if (!world.isRemote) {
+                        player.openGui(com.orbitalsunworks.OrbitalSunworks.instance,
+                            com.orbitalsunworks.handler.GuiHandler.ID_DISPERSION_ROCKET, world, center[0], center[1] + 1, center[2]);
                     }
                     return true;
                 }

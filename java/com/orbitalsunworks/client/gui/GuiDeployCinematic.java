@@ -5,10 +5,12 @@ import java.util.UUID;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.audio.PositionedSoundRecord;
+import net.minecraft.client.gui.GuiButton;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.util.ResourceLocation;
 
+import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.util.glu.GLU;
 
@@ -28,6 +30,8 @@ public class GuiDeployCinematic extends GuiScreen {
 
     private static final ResourceLocation TEX_EARTH = new ResourceLocation(
         "orbitalsunworks", "textures/environment/earth.png");
+    private static final ResourceLocation TEX_CLOUDS = new ResourceLocation(
+        "orbitalsunworks", "textures/environment/earth_clouds.png");
     private static final ResourceLocation TEX_FLAME = new ResourceLocation(
         "orbitalsunworks", "textures/models/rocket_flame.png");
 
@@ -41,6 +45,19 @@ public class GuiDeployCinematic extends GuiScreen {
     private boolean finished = false;
     private boolean toastShown = false;
 
+    private boolean paused = false;
+    private boolean cameraLocked = false;
+    private float manualYaw = 0f;
+    private float manualPitch = 0f;
+    private float manualZoom = 1.0f;
+    private int lastDragX = -1;
+    private int lastDragY = -1;
+    private boolean dragging = false;
+
+    private GuiButton btnLockCam;
+    private GuiButton btnPause;
+    private GuiButton btnSkip;
+
     private boolean sfxSeco = false;
     private boolean sfxFairing = false;
     private boolean sfxSeparate = false;
@@ -52,8 +69,8 @@ public class GuiDeployCinematic extends GuiScreen {
     private final ModelRocket rocket = new ModelRocket();
     private final ModelSatellite satellite = new ModelSatellite();
 
-    private static final int STARS = 360;
-    private static final float[][] STAR_POS = new float[STARS][3];
+    private static final int STARS = 420;
+    private static final float[][] STAR_POS = new float[STARS][4];
 
     static {
         Random r = new Random(20260427L);
@@ -63,6 +80,7 @@ public class GuiDeployCinematic extends GuiScreen {
             STAR_POS[i][0] = (float) (Math.sin(phi) * Math.cos(theta));
             STAR_POS[i][1] = (float) Math.cos(phi);
             STAR_POS[i][2] = (float) (Math.sin(phi) * Math.sin(theta));
+            STAR_POS[i][3] = 0.45f + r.nextFloat() * 0.55f;
         }
     }
 
@@ -114,307 +132,359 @@ public class GuiDeployCinematic extends GuiScreen {
 
     public GuiDeployCinematic(UUID id, String name, int tier, float health, boolean shield) {
         this.satId = id;
-        this.satName = name;
-        this.satTier = tier;
+        this.satName = name != null ? name : "OS-001";
+        this.satTier = Math.max(1, tier);
         this.satHealth = health;
         this.debrisShield = shield;
     }
 
     public static void open(UUID id, String name, int tier, float health, boolean shield) {
-        Minecraft.getMinecraft().displayGuiScreen(
-            new GuiDeployCinematic(id, name, tier, health, shield));
-    }
-
-    @Override
-    public void initGui() {
-        super.initGui();
-        this.buttonList.clear();
-        this.playSfx("mob.enderdragon.growl", 0.55f);
-    }
-
-    @Override
-    public void updateScreen() {
-        super.updateScreen();
-        if (this.finished) {
-            return;
+        Minecraft mc = Minecraft.getMinecraft();
+        if (mc != null) {
+            mc.displayGuiScreen(new GuiDeployCinematic(id, name, tier, health, shield));
         }
-        this.tick++;
-        this.updateSounds(this.tick);
-        if (this.tick >= CinematicTimeline.DURATION) {
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public void initGui() {
+        this.buttonList.clear();
+        this.btnLockCam = new GuiButton(0, this.width - 252, 8, 96, 18,
+            this.cameraLocked ? "C\u00e2mera: Travada" : "C\u00e2mera: Auto");
+        this.btnPause = new GuiButton(1, this.width - 152, 8, 66, 18,
+            this.paused ? "Retomar" : "Pausar");
+        this.btnSkip = new GuiButton(2, this.width - 82, 8, 74, 18, "Pular (ESC)");
+        this.buttonList.add(this.btnLockCam);
+        this.buttonList.add(this.btnPause);
+        this.buttonList.add(this.btnSkip);
+    }
+
+    @Override
+    protected void actionPerformed(GuiButton btn) {
+        if (btn.id == 0) {
+            this.cameraLocked = !this.cameraLocked;
+            this.btnLockCam.displayString = this.cameraLocked ? "C\u00e2mera: Travada" : "C\u00e2mera: Auto";
+        } else if (btn.id == 1) {
+            this.paused = !this.paused;
+            this.btnPause.displayString = this.paused ? "Retomar" : "Pausar";
+        } else if (btn.id == 2) {
             this.finished = true;
             this.mc.displayGuiScreen(null);
         }
     }
 
-    private void updateSounds(int t) {
-        if (t < 68 && t % 7 == 0) {
-            this.playSfx("mob.enderdragon.growl", 0.48f);
-            this.playSfx("random.fizz", 0.60f);
+    @Override
+    public void updateScreen() {
+        super.updateScreen();
+        if (this.finished || this.paused) {
+            return;
         }
-        if (!this.sfxSeco && t >= 72) {
-            this.sfxSeco = true;
-            this.playSfx("tile.piston.in", 0.75f);
-            this.playSfx("random.fizz", 0.90f);
-        }
-        if (!this.sfxFairing && t >= CinematicTimeline.F1_FAIRING) {
-            this.sfxFairing = true;
-            this.playSfx("fireworks.launch", 0.95f);
-            this.playSfx("tile.piston.out", 0.85f);
-        }
-        if (!this.sfxSeparate && t >= CinematicTimeline.F2_SEPARATION) {
-            this.sfxSeparate = true;
-            this.playSfx("tile.piston.out", 0.95f);
-            this.playSfx("note.pling", 1.15f);
-        }
-        if (t >= CinematicTimeline.F2_SEPARATION + 10 && t <= CinematicTimeline.F2_SEPARATION + 34 && t % 12 == 0) {
-            this.playSfx("random.fizz", 0.70f);
-        }
-        if (t >= CinematicTimeline.F3_DRIFT + 10 && t <= CinematicTimeline.F3_DRIFT + 45 && t % 16 == 0) {
-            this.playSfx("random.fizz", 1.25f);
-        }
-        if (!this.sfxAntenna && t >= CinematicTimeline.F4_UNFOLD + 2) {
-            this.sfxAntenna = true;
-            this.playSfx("tile.piston.out", 1.10f);
-            this.playSfx("random.click", 1.20f);
-        }
-        if (!this.sfxLeftWing && t >= CinematicTimeline.F4_UNFOLD + 12) {
-            this.sfxLeftWing = true;
-            this.playSfx("tile.piston.out", 0.90f);
-        }
-        if (!this.sfxRightWing && t >= CinematicTimeline.F4_UNFOLD + 24) {
-            this.sfxRightWing = true;
-            this.playSfx("tile.piston.out", 0.95f);
-        }
-        if (t >= CinematicTimeline.F4_UNFOLD + 28 && t <= CinematicTimeline.F4_UNFOLD + 78 && t % 10 == 0) {
-            this.playSfx("random.click", 1.15f);
-        }
-        if (!this.sfxOperational && t >= CinematicTimeline.F5_INSPECT + 8) {
-            this.sfxOperational = true;
-            this.playSfx("random.levelup", 0.90f);
+        this.tick++;
+        triggerPhaseSounds(this.tick);
+        if (this.tick >= CinematicTimeline.DURATION + 25) {
+            this.finished = true;
+            this.mc.displayGuiScreen(null);
         }
     }
 
-    private void playSfx(String name, float pitch) {
+    private void triggerPhaseSounds(int t) {
+        if (t >= 70 && !this.sfxSeco) {
+            this.sfxSeco = true;
+            playUiSound("random.fizz", 0.55f, 0.7f);
+        }
+        if (t >= CinematicTimeline.F1_FAIRING && !this.sfxFairing) {
+            this.sfxFairing = true;
+            playUiSound("tile.piston.out", 0.75f, 0.85f);
+        }
+        if (t >= CinematicTimeline.F2_SEPARATION && !this.sfxSeparate) {
+            this.sfxSeparate = true;
+            playUiSound("tile.piston.out", 0.85f, 1.15f);
+        }
+        if (t >= CinematicTimeline.F4_UNFOLD && !this.sfxAntenna) {
+            this.sfxAntenna = true;
+            playUiSound("note.pling", 0.5f, 1.35f);
+        }
+        if (t >= CinematicTimeline.F4_UNFOLD + 15 && !this.sfxLeftWing) {
+            this.sfxLeftWing = true;
+            playUiSound("tile.piston.out", 0.6f, 1.25f);
+        }
+        if (t >= CinematicTimeline.F4_UNFOLD + 25 && !this.sfxRightWing) {
+            this.sfxRightWing = true;
+            playUiSound("tile.piston.out", 0.6f, 1.30f);
+        }
+        if (t >= CinematicTimeline.F5_INSPECT && !this.sfxOperational) {
+            this.sfxOperational = true;
+            playUiSound("random.levelup", 0.75f, 1.2f);
+        }
+    }
+
+    private void playUiSound(String sound, float vol, float pitch) {
         if (this.mc != null && this.mc.getSoundHandler() != null) {
             this.mc.getSoundHandler().playSound(
-                PositionedSoundRecord.func_147674_a(new ResourceLocation(name), pitch));
+                PositionedSoundRecord.func_147674_a(new ResourceLocation(sound), pitch));
+        }
+    }
+
+    @Override
+    public void handleMouseInput() {
+        super.handleMouseInput();
+        int wheel = Mouse.getDWheel();
+        if (wheel != 0) {
+            this.manualZoom -= (wheel / 120.0f) * 0.12f;
+            if (this.manualZoom < 0.45f) this.manualZoom = 0.45f;
+            if (this.manualZoom > 2.40f) this.manualZoom = 2.40f;
+        }
+    }
+
+    @Override
+    protected void mouseClicked(int mouseX, int mouseY, int button) {
+        super.mouseClicked(mouseX, mouseY, button);
+        if (button == 0 && mouseY > 30) {
+            this.dragging = true;
+            this.lastDragX = mouseX;
+            this.lastDragY = mouseY;
+        }
+    }
+
+    @Override
+    protected void mouseMovedOrUp(int mouseX, int mouseY, int state) {
+        super.mouseMovedOrUp(mouseX, mouseY, state);
+        if (state == 0) {
+            this.dragging = false;
+        }
+    }
+
+    @Override
+    protected void mouseClickMove(int mouseX, int mouseY, int clickedMouseButton, long timeSinceLastClick) {
+        super.mouseClickMove(mouseX, mouseY, clickedMouseButton, timeSinceLastClick);
+        if (clickedMouseButton == 0 && this.dragging) {
+            int dx = mouseX - this.lastDragX;
+            int dy = mouseY - this.lastDragY;
+            this.lastDragX = mouseX;
+            this.lastDragY = mouseY;
+            this.manualYaw += dx * 0.55f;
+            this.manualPitch += dy * 0.45f;
+            if (this.manualPitch < -82f) this.manualPitch = -82f;
+            if (this.manualPitch > 82f) this.manualPitch = 82f;
         }
     }
 
     @Override
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
-        float p = this.tick + partialTicks;
-        int w = this.width;
-        int h = this.height;
+        float p = this.paused ? (float) this.tick : Math.min(CinematicTimeline.DURATION + 25f, this.tick + partialTicks);
 
+        GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
+        GL11.glPushClientAttrib(GL11.GL_ALL_CLIENT_ATTRIB_BITS);
+
+        // 1) Cobertura preta 100% opaca em toda a tela ANTES da cena 3D
+        // (impede qualquer vazamento do mundo, nuvens ou mão do personagem).
+        GL11.glDisable(GL11.GL_DEPTH_TEST);
+        GL11.glDepthMask(false);
+        GL11.glDisable(GL11.GL_TEXTURE_2D);
+        GL11.glDisable(GL11.GL_LIGHTING);
+        GL11.glDisable(GL11.GL_ALPHA_TEST);
+        GL11.glDisable(GL11.GL_BLEND);
+        GL11.glColor4f(0f, 0f, 0f, 1f);
+        drawSolidQuad2D(0f, 0f, this.width, this.height);
         GL11.glClear(GL11.GL_DEPTH_BUFFER_BIT);
 
+        // 2) Cena espacial 3D
         GL11.glMatrixMode(GL11.GL_PROJECTION);
         GL11.glPushMatrix();
         GL11.glLoadIdentity();
-        float aspect = Math.max(0.1f, (float) w / (float) Math.max(1, h));
-        GLU.gluPerspective(56f, aspect, 0.1f, 500f);
+        float aspect = (float) this.width / (float) Math.max(1, this.height);
+        GLU.gluPerspective(52.0f, aspect, 0.1f, 800.0f);
+
         GL11.glMatrixMode(GL11.GL_MODELVIEW);
         GL11.glPushMatrix();
         GL11.glLoadIdentity();
-
-        GL11.glEnable(GL11.GL_DEPTH_TEST);
-        GL11.glDepthMask(true);
-        GL11.glDisable(GL11.GL_FOG);
-        GL11.glDisable(GL11.GL_ALPHA_TEST);
-        GL11.glDisable(GL11.GL_LIGHTING);
-
-        this.drawSpace(p);
 
         float focusSat = CinematicTimeline.cameraFocusSatellite(p);
         float satDist = CinematicTimeline.satelliteDistance(p);
-        float stageRecede = CinematicTimeline.stageRecede(p);
-        float mainBurn = CinematicTimeline.mainBurn(p);
-        float nozzleHeat = CinematicTimeline.nozzleHeat(p);
+        float stageBack = CinematicTimeline.stageRecede(p);
+        float targetY = 4.65f + satDist * focusSat;
 
-        float rocketScale = 0.85f;
-        float rocketPitch = 82f;
-        float axisZ = (float) Math.sin(Math.toRadians(rocketPitch));
-        float axisY = (float) Math.cos(Math.toRadians(rocketPitch));
+        float autoOrbit = this.cameraLocked ? 0f : CinematicTimeline.cameraOrbit(p);
+        float yaw = autoOrbit + (float) Math.toRadians(this.manualYaw);
+        float pitch = (float) Math.toRadians(this.manualPitch);
+        float camDist = CinematicTimeline.cameraDistance(p) * this.manualZoom;
+        float camH = (this.cameraLocked ? 1.2f : CinematicTimeline.cameraHeight(p)) * this.manualZoom;
 
-        // Base do adaptador onde o satélite fica alojado dentro da coifa.
-        float adapterOffset = ModelRocket.PAYLOAD_ADAPTER_Y * rocketScale;
-        float satStartZ = -1.6f + adapterOffset * axisZ;
-        float satStartY = adapterOffset * axisY;
+        float horiz = (float) Math.cos(pitch) * camDist;
+        float camX = (float) Math.sin(yaw) * horiz;
+        float camZ = (float) Math.cos(yaw) * horiz;
+        float camY = targetY + camH + (float) Math.sin(pitch) * camDist;
 
-        float satZ = satStartZ + satDist * 1.45f;
-        float satY = satStartY + satDist * 0.12f;
+        GLU.gluLookAt(camX, camY, camZ, 0f, targetY, 0f, 0f, 1f, 0f);
 
-        float lookZ = (1f - focusSat) * (satStartZ * 0.6f) + focusSat * satZ;
-        float lookY = (1f - focusSat) * (satStartY * 0.5f) + focusSat * (satY + 0.35f);
+        // Esfera estelar 360° centrada na câmera
+        GL11.glPushMatrix();
+        GL11.glTranslatef(camX, camY, camZ);
+        drawStars(p);
+        GL11.glPopMatrix();
 
-        float camDist = CinematicTimeline.cameraDistance(p);
-        float camAng = CinematicTimeline.cameraOrbit(p);
-        float camH = CinematicTimeline.cameraHeight(p);
-        float camX = (float) Math.cos(camAng) * camDist;
-        float camZ = (float) Math.sin(camAng) * camDist + lookZ;
-        GLU.gluLookAt(camX, lookY + camH, camZ, 0f, lookY, lookZ, 0f, 1f, 0f);
+        // Terra esférica 3D real embaixo (nunca some ao girar a câmera!)
+        drawEarth3D(p);
 
-        // Vibração sutil durante a queima hipersônica inicial + linhas de velocidade orbital.
-        if (mainBurn > 0.01f) {
-            this.drawSpeedStreaks(p, mainBurn);
+        GL11.glEnable(GL11.GL_DEPTH_TEST);
+        GL11.glDepthMask(true);
+        GL11.glEnable(GL11.GL_TEXTURE_2D);
+        GL11.glColor4f(1f, 1f, 1f, 1f);
+
+        // Estágio do foguete
+        float stageY = -stageBack;
+        float heat = CinematicTimeline.nozzleHeat(p);
+        float burn = CinematicTimeline.mainBurn(p);
+        float stageThrust = CinematicTimeline.stageBurn(p);
+
+        GL11.glPushMatrix();
+        GL11.glTranslatef(0f, stageY, 0f);
+        this.rocket.renderBodyWithoutFairing(heat);
+        if (burn > 0.01f) {
+            renderRocketPlume(p, burn, true);
+        } else if (stageThrust > 0.01f) {
+            renderRocketPlume(p, stageThrust * 0.65f, false);
         }
+        GL11.glPopMatrix();
 
-        // ---- 1. Foguete Tier 1 (sem coifa, corpo principal + chama) ----
-        float stageFade = 1f - CinematicTimeline.easeOut((p - (CinematicTimeline.F4_UNFOLD + 10f)) / 70f);
-        if (stageFade > 0.01f) {
-            float vib = mainBurn * 0.025f;
-            float vx = (float) Math.sin(p * 2.3f) * vib;
-            float vy = (float) Math.cos(p * 2.9f) * vib;
-
+        // Coifas abrindo sem atravessar o satélite
+        float rel = CinematicTimeline.fairingRelease(p);
+        float drift = CinematicTimeline.fairingDrift(p);
+        float spin = CinematicTimeline.fairingSpin(p);
+        for (int side = -1; side <= 1; side += 2) {
             GL11.glPushMatrix();
-            GL11.glTranslatef(vx, vy - stageRecede * 0.55f, -1.6f - stageRecede * 2.4f);
-            GL11.glRotatef(rocketPitch + stageRecede * 7.5f, 1f, 0f, 0f);
-            GL11.glRotatef(stageRecede * 5.0f, 0f, 0f, 1f);
-            GL11.glScalef(rocketScale, rocketScale, rocketScale);
-
-            GL11.glEnable(GL11.GL_BLEND);
-            GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-            GL11.glColor4f(1f, 1f, 1f, stageFade);
-            this.rocket.renderBodyWithoutFairing(nozzleHeat);
-
-            // Coifa fechada antes da F1; metades separando a partir da F1.
-            float fairing = CinematicTimeline.fairingRelease(p);
-            float fairingDrift = CinematicTimeline.fairingDrift(p);
-            float fairingSpin = CinematicTimeline.fairingSpin(p);
-            if (fairing < 0.99f) {
-                for (int side = -1; side <= 1; side += 2) {
-                    GL11.glPushMatrix();
-                    if (fairing > 0.001f) {
-                        GL11.glTranslatef(
-                            side * (fairing * 0.55f + fairingDrift * 0.25f),
-                            -fairingDrift * 0.95f,
-                            fairing * 0.12f);
-                        GL11.glTranslatef(0f, ModelRocket.PAYLOAD_ADAPTER_Y + 0.6f, 0f);
-                        GL11.glRotatef(side * fairingSpin * 0.85f, 0.2f, 0.35f, 0.9f);
-                        GL11.glTranslatef(0f, -(ModelRocket.PAYLOAD_ADAPTER_Y + 0.6f), 0f);
-                    }
-                    this.rocket.renderFairingHalf(side);
-                    GL11.glPopMatrix();
-                }
-            }
-
-            // Chama principal (Fase 0) ou burn de afastamento (Fase 2).
-            float retroBurn = CinematicTimeline.stageBurn(p);
-            float totalBurn = Math.max(mainBurn, retroBurn * 0.55f);
-            if (totalBurn > 0.01f) {
-                this.renderRocketPlume(p, totalBurn, mainBurn > 0.05f);
-            }
-
-            GL11.glColor4f(1f, 1f, 1f, 1f);
-            GL11.glDisable(GL11.GL_BLEND);
+            GL11.glTranslatef(side * (0.18f * rel + drift), stageY - drift * 0.25f, 0f);
+            GL11.glRotatef(-side * (24f * rel + spin), 0f, 0f, 1f);
+            GL11.glRotatef(side * spin * 0.3f, 0f, 1f, 0f);
+            this.rocket.renderFairingHalf(side);
             GL11.glPopMatrix();
         }
 
-        // ---- 2. Satélite Metálico (desacoplando da coifa -> abertura -> órbita) ----
-        if (p >= CinematicTimeline.F1_FAIRING - 2f) {
-            float unfold = CinematicTimeline.unfold(p);
-            float spin = CinematicTimeline.satelliteSpin(p);
-            float satPitch = rocketPitch * (1f - focusSat);
-            float satScale = 0.62f + 0.20f * focusSat;
+        // Satélite emergindo e desdobrando após sair da coifa
+        float satY = ModelRocket.PAYLOAD_ADAPTER_Y + satDist;
+        float unfold = CinematicTimeline.unfold(p);
+        float satSpin = CinematicTimeline.satelliteSpin(p);
 
-            GL11.glPushMatrix();
-            GL11.glTranslatef(0f, satY, satZ);
-            GL11.glRotatef(satPitch, 1f, 0f, 0f);
-            GL11.glScalef(satScale, satScale, satScale);
-            this.satellite.renderAll(unfold, spin, p);
+        GL11.glPushMatrix();
+        GL11.glTranslatef(0f, satY, 0f);
+        GL11.glRotatef(satSpin, 0f, 1f, 0f);
+        this.satellite.renderAll(unfold, satSpin, p, this.satHealth);
+        if (p >= CinematicTimeline.F3_DRIFT && p < CinematicTimeline.F4_UNFOLD + 15f) {
+            rcsPuff(p);
+        }
+        if (p >= CinematicTimeline.F4_UNFOLD) {
+            renderOrbitBeacon(p);
+        }
+        GL11.glPopMatrix();
 
-            if (p >= CinematicTimeline.F3_DRIFT && p <= CinematicTimeline.F4_UNFOLD + 15f) {
-                this.rcsPuff(p);
-            }
-            if (p >= CinematicTimeline.F5_INSPECT) {
-                this.renderOrbitBeacon(p);
-            }
-            GL11.glPopMatrix();
+        if (burn > 0.15f) {
+            drawSpeedStreaks(p, burn);
         }
 
-        GL11.glDisable(GL11.GL_BLEND);
-        GL11.glEnable(GL11.GL_ALPHA_TEST);
-        GL11.glDisable(GL11.GL_DEPTH_TEST);
+        GL11.glPopMatrix();
         GL11.glMatrixMode(GL11.GL_PROJECTION);
         GL11.glPopMatrix();
         GL11.glMatrixMode(GL11.GL_MODELVIEW);
-        GL11.glPopMatrix();
-        GL11.glColor4f(1, 1, 1, 1);
 
-        // ---- HUD Cinematográfico ----
-        this.drawGradientRect(0, 0, w, h / 8, 0xCC000000, 0x00000000);
-        this.drawGradientRect(0, h - h / 8, w, h, 0x00000000, 0xCC000000);
+        // Restaura 2D limpo antes de desenhar HUD/Botões (evita retângulos cinzas!)
+        GL11.glPopClientAttrib();
+        GL11.glPopAttrib();
 
-        if (p < 18f) {
-            this.fullScreenFade(1f - CinematicTimeline.clamp01(p / 18f));
+        GL11.glEnable(GL11.GL_TEXTURE_2D);
+        GL11.glEnable(GL11.GL_BLEND);
+        GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+        GL11.glColor4f(1f, 1f, 1f, 1f);
+
+        missionCaption(p, this.width, this.height);
+
+        GL11.glDisable(GL11.GL_TEXTURE_2D);
+        this.fontRendererObj.drawStringWithShadow(
+            "\u00a77Arraste para girar 360\u00b0 | Scroll: Zoom", 10, 12, 0xA8C0D0);
+        GL11.glColor4f(1f, 1f, 1f, 1f);
+
+        // Fade-in inicial limpo
+        if (p < 14f) {
+            fullScreenFade(1f - p / 14f);
         }
-        if (p > CinematicTimeline.DURATION - 25f) {
-            this.fullScreenFade(CinematicTimeline.clamp01((p - (CinematicTimeline.DURATION - 25f)) / 25f));
-        }
 
-        this.missionCaption(p, w, h);
-
-        String skip = "[ESC] Pular cinem\u00e1tica";
-        int sw = this.fontRendererObj.getStringWidth(skip);
-        drawRect(w - sw - 14, 6, w - 6, 20, 0x900B111A);
-        this.fontRendererObj.drawStringWithShadow(skip, w - sw - 10, 9, 0xB8D8EE);
-
+        GL11.glColor4f(1f, 1f, 1f, 1f);
         super.drawScreen(mouseX, mouseY, partialTicks);
     }
 
-    private void drawSpace(float p) {
+    private void drawSolidQuad2D(float x0, float y0, float x1, float y1) {
         Tessellator t = Tessellator.instance;
+        t.startDrawingQuads();
+        t.addVertex(x0, y1, 0.0);
+        t.addVertex(x1, y1, 0.0);
+        t.addVertex(x1, y0, 0.0);
+        t.addVertex(x0, y0, 0.0);
+        t.draw();
+    }
+
+    private void drawStars(float p) {
         GL11.glDisable(GL11.GL_TEXTURE_2D);
-
-        float s = 260f;
-        GL11.glBegin(GL11.GL_QUADS);
-        GL11.glColor3f(0.025f, 0.030f, 0.042f);
-        GL11.glVertex3f(-s, -s, -s); GL11.glVertex3f(s, -s, -s);
-        GL11.glVertex3f(s, s, -s); GL11.glVertex3f(-s, s, -s);
-        GL11.glVertex3f(-s, -s, s); GL11.glVertex3f(s, -s, s);
-        GL11.glVertex3f(s, s, s); GL11.glVertex3f(-s, s, s);
-        GL11.glVertex3f(-s, -s, -s); GL11.glVertex3f(-s, s, -s);
-        GL11.glVertex3f(-s, s, s); GL11.glVertex3f(-s, -s, s);
-        GL11.glVertex3f(s, -s, -s); GL11.glVertex3f(s, s, -s);
-        GL11.glVertex3f(s, s, s); GL11.glVertex3f(s, -s, s);
-        GL11.glVertex3f(-s, -s, -s); GL11.glVertex3f(s, -s, -s);
-        GL11.glVertex3f(s, -s, s); GL11.glVertex3f(-s, -s, s);
-        GL11.glVertex3f(-s, s, -s); GL11.glVertex3f(s, s, -s);
-        GL11.glVertex3f(s, s, s); GL11.glVertex3f(-s, s, s);
-        GL11.glEnd();
-
+        GL11.glDisable(GL11.GL_LIGHTING);
         GL11.glPointSize(1.8f);
-        GL11.glEnable(GL11.GL_POINT_SMOOTH);
-        GL11.glEnable(GL11.GL_BLEND);
-        GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE);
-        t.startDrawing(GL11.GL_POINTS);
+        GL11.glBegin(GL11.GL_POINTS);
         for (int i = 0; i < STARS; i++) {
-            float tw = 0.50f + 0.50f * (0.5f + 0.5f * (float) Math.sin(p * 0.04f + i * 1.7f));
-            t.setColorRGBA_F(tw, tw, Math.min(1f, tw * 1.06f), 1f);
-            t.addVertex(STAR_POS[i][0] * 235f, STAR_POS[i][1] * 235f, STAR_POS[i][2] * 235f);
+            float tw = STAR_POS[i][3] * (0.75f + 0.25f * (float) Math.sin(p * 0.08 + i));
+            GL11.glColor4f(tw, tw * 0.98f, Math.min(1f, tw * 1.06f), 1f);
+            GL11.glVertex3f(STAR_POS[i][0] * 320f, STAR_POS[i][1] * 320f, STAR_POS[i][2] * 320f);
         }
-        t.draw();
-        GL11.glDisable(GL11.GL_POINT_SMOOTH);
-        GL11.glDisable(GL11.GL_BLEND);
-
-        // Terra limpa e perfeitamente redonda (72 segmentos, sem triângulos azuis na borda).
+        GL11.glEnd();
         GL11.glEnable(GL11.GL_TEXTURE_2D);
+        GL11.glColor4f(1f, 1f, 1f, 1f);
+    }
+
+    private void drawEarth3D(float p) {
+        GL11.glPushMatrix();
+        GL11.glDisable(GL11.GL_LIGHTING);
+        GL11.glEnable(GL11.GL_TEXTURE_2D);
+        GL11.glEnable(GL11.GL_BLEND);
+        GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+        GL11.glTranslatef(0f, -152f, 0f);
+        GL11.glRotatef(20f, 0f, 0f, 1f);
+        GL11.glRotatef(p * 0.14f, 0f, 1f, 0f);
+
         this.mc.getTextureManager().bindTexture(TEX_EARTH);
+        drawTexturedSphere(118f, 36, 56, 1.0f);
+
+        GL11.glRotatef(p * 0.06f + 35f, 0f, 1f, 0f);
+        this.mc.getTextureManager().bindTexture(TEX_CLOUDS);
+        drawTexturedSphere(119.0f, 32, 48, 0.85f);
+
+        GL11.glPopMatrix();
         GL11.glColor4f(1f, 1f, 1f, 1f);
-        float er = 148f;
-        float ey = -118f;
-        int segs = 72;
-        t.startDrawing(GL11.GL_TRIANGLE_FAN);
-        t.setColorOpaque_F(1f, 1f, 1f);
-        t.addVertexWithUV(0f, ey, 0f, 0.5f, 0.5f);
-        for (int i = 0; i <= segs; i++) {
-            double a = Math.PI * 2.0 * i / segs + p * 0.0010f;
-            t.addVertexWithUV((float) Math.cos(a) * er, ey, (float) Math.sin(a) * er,
-                0.5f + (float) Math.cos(a) * 0.5f, 0.5f + (float) Math.sin(a) * 0.5f);
+    }
+
+    private void drawTexturedSphere(float r, int stacks, int slices, float alpha) {
+        Tessellator t = Tessellator.instance;
+        for (int i = 0; i < stacks; i++) {
+            double phi0 = Math.PI * i / stacks;
+            double phi1 = Math.PI * (i + 1) / stacks;
+            float v0 = (float) i / stacks;
+            float v1 = (float) (i + 1) / stacks;
+            t.startDrawing(GL11.GL_QUAD_STRIP);
+            for (int j = 0; j <= slices; j++) {
+                double th = 2.0 * Math.PI * j / slices;
+                float u = (float) j / slices;
+
+                float x0 = (float) (Math.sin(phi0) * Math.cos(th));
+                float y0 = (float) Math.cos(phi0);
+                float z0 = (float) (Math.sin(phi0) * Math.sin(th));
+                float l0 = Math.max(0.18f, 0.45f + 0.55f * (y0 * 0.65f + x0 * 0.55f));
+                t.setColorRGBA_F(l0, l0, Math.min(1f, l0 * 1.04f), alpha);
+                t.addVertexWithUV(x0 * r, y0 * r, z0 * r, u, v0);
+
+                float x1 = (float) (Math.sin(phi1) * Math.cos(th));
+                float y1 = (float) Math.cos(phi1);
+                float z1 = (float) (Math.sin(phi1) * Math.sin(th));
+                float l1 = Math.max(0.18f, 0.45f + 0.55f * (y1 * 0.65f + x1 * 0.55f));
+                t.setColorRGBA_F(l1, l1, Math.min(1f, l1 * 1.04f), alpha);
+                t.addVertexWithUV(x1 * r, y1 * r, z1 * r, u, v1);
+            }
+            t.draw();
         }
-        t.draw();
-        GL11.glColor4f(1f, 1f, 1f, 1f);
     }
 
     private void drawSpeedStreaks(float p, float burn) {
@@ -467,23 +537,9 @@ public class GuiDeployCinematic extends GuiScreen {
         }
         t.draw();
 
-        GL11.glDisable(GL11.GL_TEXTURE_2D);
-        GL11.glColor4f(0.82f, 0.94f, 1.0f, 0.95f * strength);
-        float coreRad = rad * 0.55f;
-        float coreLen = len * 0.62f;
-        t.startDrawing(GL11.GL_TRIANGLES);
-        for (int i = 0; i < 12; i++) {
-            double a0 = Math.PI * 2 * i / 12.0;
-            double a1 = Math.PI * 2 * (i + 1) / 12.0;
-            t.addVertex(Math.cos(a0) * coreRad, -0.02, Math.sin(a0) * coreRad);
-            t.addVertex(Math.cos(a1) * coreRad, -0.02, Math.sin(a1) * coreRad);
-            t.addVertex(0.0, -coreLen, 0.0);
-        }
-        t.draw();
-
-        GL11.glEnable(GL11.GL_TEXTURE_2D);
         GL11.glEnable(GL11.GL_CULL_FACE);
         GL11.glDepthMask(true);
+        GL11.glDisable(GL11.GL_BLEND);
         GL11.glColor4f(1f, 1f, 1f, 1f);
     }
 
@@ -511,7 +567,7 @@ public class GuiDeployCinematic extends GuiScreen {
     }
 
     private void renderOrbitBeacon(float p) {
-        float blink = (p % 30f) < 7f ? 1.0f : 0.2f;
+        float blink = (p % 30f) < 7f ? 1.0f : 0.25f;
         Tessellator t = Tessellator.instance;
         GL11.glDisable(GL11.GL_TEXTURE_2D);
         GL11.glEnable(GL11.GL_BLEND);
@@ -529,7 +585,7 @@ public class GuiDeployCinematic extends GuiScreen {
 
     private void missionCaption(float p, int w, int h) {
         String caption = null;
-        int color = 0xC4DAE8;
+        int color = 0xD2E8F8;
         if (p > 8f && p < 70f) {
             caption = "Propuls\u00e3o orbital em velocidade hipers\u00f4nica";
             color = 0x55E0FF;
@@ -551,49 +607,42 @@ public class GuiDeployCinematic extends GuiScreen {
         }
 
         if (caption != null) {
-            this.drawCenteredString(this.fontRendererObj, caption, w / 2, h - 54, color);
-        }
-        if (p >= CinematicTimeline.F5_INSPECT + 12f) {
-            String gen = OSUtils.formatRF(this.currentGenerationRFt()) + "/t de gera\u00e7\u00e3o inicial";
-            this.drawCenteredString(this.fontRendererObj, gen, w / 2, h - 40, 0x7CFC00);
+            GL11.glDisable(GL11.GL_TEXTURE_2D);
+            drawRect(w / 2 - 190, h - 52, w / 2 + 190, h - 18, 0x88060D16);
+            GL11.glEnable(GL11.GL_TEXTURE_2D);
+            GL11.glPushMatrix();
+            GL11.glScalef(0.85f, 0.85f, 1f);
+            float inv = 1f / 0.85f;
+            this.drawCenteredString(this.fontRendererObj, caption, Math.round((w / 2f) * inv), Math.round((h - 46f) * inv), color);
+            if (p >= CinematicTimeline.F5_INSPECT + 10f) {
+                String gen = OSUtils.formatRF(this.currentGenerationRFt()) + "/t de gera\u00e7\u00e3o inicial";
+                this.drawCenteredString(this.fontRendererObj, gen, Math.round((w / 2f) * inv), Math.round((h - 32f) * inv), 0x7CFC00);
+            }
+            GL11.glPopMatrix();
         }
     }
 
     private void fullScreenFade(float alpha) {
-        Tessellator t = Tessellator.instance;
         GL11.glEnable(GL11.GL_BLEND);
         GL11.glDisable(GL11.GL_TEXTURE_2D);
         GL11.glColor4f(0f, 0f, 0f, alpha);
-        t.startDrawingQuads();
-        t.addVertex(0, 0, 0);
-        t.addVertex(0, this.height, 0);
-        t.addVertex(this.width, this.height, 0);
-        t.addVertex(this.width, 0, 0);
-        t.draw();
+        drawSolidQuad2D(0f, 0f, this.width, this.height);
         GL11.glEnable(GL11.GL_TEXTURE_2D);
         GL11.glDisable(GL11.GL_BLEND);
         GL11.glColor4f(1, 1, 1, 1);
     }
 
     private long currentGenerationRFt() {
-        long base = 1000000L;
-        float factor = this.satHealth >= 0.2f
-            ? 0.5f + (this.satHealth - 0.2f) * (0.5f / 0.8f)
-            : 0.5f;
+        long base = 1000000L * this.satTier;
+        float factor = this.satHealth >= 0.4f
+            ? 0.5f + ((this.satHealth - 0.4f) / 0.6f) * 0.5f
+            : (this.satHealth / 0.4f) * 0.5f;
         return (long) (base * factor);
     }
 
     @Override
     protected void keyTyped(char c, int keyCode) {
         if (keyCode == 1 || (this.tick > 15 && (keyCode == 28 || keyCode == 57))) {
-            this.finished = true;
-            this.mc.displayGuiScreen(null);
-        }
-    }
-
-    @Override
-    protected void mouseClicked(int mouseX, int mouseY, int button) {
-        if (this.tick > 45) {
             this.finished = true;
             this.mc.displayGuiScreen(null);
         }

@@ -12,7 +12,7 @@ import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
 /**
- * TESR da estrutura do satélite na órbita.
+ * TESR da estrutura do satélite na órbita com dano visual persistente conforme a vida útil.
  */
 @SideOnly(Side.CLIENT)
 public class TileOrbitSatelliteRenderer extends TileEntitySpecialRenderer {
@@ -28,6 +28,8 @@ public class TileOrbitSatelliteRenderer extends TileEntitySpecialRenderer {
         if (meta != 0) {
             return;
         }
+        TileOrbitSatellite tile = (TileOrbitSatellite) te;
+        float health = Math.max(0.01f, Math.min(1.0f, tile.getHealth()));
 
         GL11.glPushMatrix();
         GL11.glTranslated(x + 0.5, y - 0.6, z + 0.5);
@@ -36,9 +38,9 @@ public class TileOrbitSatelliteRenderer extends TileEntitySpecialRenderer {
         float spin = (time + partialTicks) * 0.05f;
 
         GL11.glScalef(2.2f, 2.2f, 2.2f);
-        this.model.renderAll(1.0f, spin);
+        this.model.renderAll(1.0f, spin, -1f, health);
 
-        // Brilho nos painéis solares
+        // Brilho nos painéis solares apenas sobre as seções intactas
         float glimmer = 0.5f + 0.5f * (float) Math.sin((time + partialTicks) * 0.03f);
         GL11.glDisable(GL11.GL_TEXTURE_2D);
         GL11.glDisable(GL11.GL_LIGHTING);
@@ -46,29 +48,49 @@ public class TileOrbitSatelliteRenderer extends TileEntitySpecialRenderer {
         GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE);
         Tessellator t = Tessellator.instance;
 
+        int missing = ModelSatellite.getMissingSegmentCount(health);
         for (int side = -1; side <= 1; side += 2) {
-            float px = side * 2.02f;
-            float w = 1.26f, d = 0.26f;
-            float py = 0.62f;
-            t.startDrawingQuads();
-            t.setColorRGBA_F(0.25f, 0.45f, 0.85f, 0.18f + 0.14f * glimmer);
-            t.addVertex(px - w, py, -d);
-            t.addVertex(px - w, py, d);
-            t.addVertex(px + w, py, d);
-            t.addVertex(px + w, py, -d);
-            t.draw();
+            int intact = 0;
+            for (int seg = 0; seg < ModelSatellite.SEGMENTS; seg++) {
+                int id = (side < 0 ? 0 : 6) + seg;
+                boolean broken = false;
+                for (int k = 0; k < missing && k < 11; k++) {
+                    // Mesma contagem aproximada de painéis restantes por asa
+                    if ((k % 2 == 0 && side > 0 && (5 - k / 2) == seg)
+                        || (k % 2 == 1 && side < 0 && (5 - k / 2) == seg)) {
+                        broken = true;
+                    }
+                }
+                if (!broken) {
+                    intact++;
+                }
+            }
+            float ratio = intact / (float) ModelSatellite.SEGMENTS;
+            if (ratio > 0.05f) {
+                float w = 1.26f * ratio;
+                float px = side * (0.76f + w);
+                float d = 0.25f;
+                float py = 0.62f;
+                t.startDrawingQuads();
+                t.setColorRGBA_F(0.25f, 0.45f, 0.85f, (0.16f + 0.14f * glimmer) * ratio);
+                t.addVertex(px - w, py, -d);
+                t.addVertex(px - w, py, d);
+                t.addVertex(px + w, py, d);
+                t.addVertex(px + w, py, -d);
+                t.draw();
+            }
         }
 
         // Luz de janela no corpo
         t.startDrawingQuads();
-        t.setColorRGBA_F(1.0f, 0.85f, 0.45f, 0.7f);
+        t.setColorRGBA_F(1.0f, 0.85f, 0.45f, 0.7f * health);
         t.addVertex(0.47f, 0.35f, -0.18f);
         t.addVertex(0.47f, 0.35f, 0.18f);
         t.addVertex(0.47f, 0.62f, 0.18f);
         t.addVertex(0.47f, 0.62f, -0.18f);
         t.draw();
 
-        // Farol vermelho piscando diretamente na ponta do receptor da antena inclinada
+        // Farol na ponta da antena inclinada
         GL11.glPushMatrix();
         GL11.glTranslatef(0f, 1.22f, 0f);
         GL11.glRotatef(35f, 1f, 0f, 0f);
@@ -83,6 +105,7 @@ public class TileOrbitSatelliteRenderer extends TileEntitySpecialRenderer {
         t.draw();
         GL11.glPopMatrix();
 
+        GL11.glColor4f(1f, 1f, 1f, 1f);
         GL11.glDisable(GL11.GL_BLEND);
         GL11.glEnable(GL11.GL_TEXTURE_2D);
         GL11.glEnable(GL11.GL_LIGHTING);

@@ -4,18 +4,23 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.world.World;
 
+import com.orbitalsunworks.client.gui.GuiControlRoom;
 import com.orbitalsunworks.client.gui.GuiCraftingStation;
+import com.orbitalsunworks.client.gui.GuiDispersionRocket;
 import com.orbitalsunworks.client.gui.GuiManual;
 import com.orbitalsunworks.client.gui.GuiNavRocket;
 import com.orbitalsunworks.client.gui.GuiNavSelect;
 import com.orbitalsunworks.client.gui.GuiOrbitSatellite;
 import com.orbitalsunworks.client.gui.GuiReturnHome;
 import com.orbitalsunworks.client.gui.GuiRocket;
+import com.orbitalsunworks.client.gui.GuiTelescope;
 import com.orbitalsunworks.craftingstation.ContainerCraftingStation;
 import com.orbitalsunworks.craftingstation.TileCraftingStation;
+import com.orbitalsunworks.rocket.ContainerDispersionRocket;
 import com.orbitalsunworks.rocket.ContainerNavRocket;
 import com.orbitalsunworks.rocket.ContainerReturnHome;
 import com.orbitalsunworks.rocket.ContainerRocket;
+import com.orbitalsunworks.rocket.TileDispersionRocket;
 import com.orbitalsunworks.rocket.TileNavRocket;
 import com.orbitalsunworks.rocket.TileRocket;
 import com.orbitalsunworks.satellite.ContainerOrbitSatellite;
@@ -32,6 +37,9 @@ public class GuiHandler implements IGuiHandler {
     public static final int ID_ORBIT_SATELLITE = 5;
     public static final int ID_NAV_ROCKET = 6;
     public static final int ID_NAV_RETURN = 7;
+    public static final int ID_DISPERSION_ROCKET = 8;
+    public static final int ID_CONTROL_ROOM = 9;
+    public static final int ID_TELESCOPE = 10;
 
     @Override
     public Object getServerGuiElement(int id, EntityPlayer player, World world, int x, int y, int z) {
@@ -48,8 +56,9 @@ public class GuiHandler implements IGuiHandler {
                 }
                 return null;
             case ID_MANUAL:
-                return null;
             case ID_NAV_SELECT:
+            case ID_CONTROL_ROOM:
+            case ID_TELESCOPE:
                 return null;
             case ID_NAV_ROCKET:
                 if (te instanceof TileNavRocket) {
@@ -64,6 +73,11 @@ public class GuiHandler implements IGuiHandler {
             case ID_NAV_RETURN:
                 if (te instanceof TileNavRocket) {
                     return new ContainerReturnHome(player.inventory, (TileNavRocket) te);
+                }
+                return null;
+            case ID_DISPERSION_ROCKET:
+                if (te instanceof TileDispersionRocket) {
+                    return new ContainerDispersionRocket(player.inventory, (TileDispersionRocket) te);
                 }
                 return null;
             default:
@@ -104,6 +118,15 @@ public class GuiHandler implements IGuiHandler {
                     return new GuiReturnHome(player.inventory, (TileNavRocket) te);
                 }
                 return null;
+            case ID_DISPERSION_ROCKET:
+                if (te instanceof TileDispersionRocket) {
+                    return new GuiDispersionRocket(player.inventory, (TileDispersionRocket) te);
+                }
+                return null;
+            case ID_CONTROL_ROOM:
+                return new GuiControlRoom(x, y, z);
+            case ID_TELESCOPE:
+                return new GuiTelescope(x, y, z);
             default:
                 return null;
         }

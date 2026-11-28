@@ -15,12 +15,9 @@ import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
 /**
- * Céu orbital: breu estrelado, Terra esférica 3D realista com camada de nuvens
- * e brilho atmosférico suave (sem triângulos na borda).
- *
- * A projeção é travada em 70° para o tamanho aparente da Terra NÃO variar
- * quando o jogador muda o FOV nas opções (enquanto entidades e blocos do
- * mundo continuam respeitando o FOV normal do jogador).
+ * Skybox orbital com:
+ *  - FOV travado em 70° independente da configuração do jogador (Quake Pro / FOV 30 não altera a Terra)
+ *  - Planeta Terra grande e próximo logo abaixo da órbita (dist=215, radius=178)
  */
 @SideOnly(Side.CLIENT)
 public class OrbitSkyRenderer extends IRenderHandler {
@@ -30,7 +27,7 @@ public class OrbitSkyRenderer extends IRenderHandler {
     private static final ResourceLocation EARTH_CLOUDS = new ResourceLocation(
         "orbitalsunworks", "textures/environment/earth_clouds.png");
 
-    private static final int STAR_COUNT = 380;
+    private static final int STAR_COUNT = 420;
     private static final float[][] STARS = new float[STAR_COUNT][5];
 
     static {
@@ -48,12 +45,12 @@ public class OrbitSkyRenderer extends IRenderHandler {
 
     @Override
     public void render(float partialTicks, WorldClient world, Minecraft mc) {
-        // Trava FOV aparente da Terra e estrelas em 70° independente do FOV do jogador.
+        // Trava FOV aparente da Terra e estrelas em 70° independente do FOV do jogador!
         GL11.glMatrixMode(GL11.GL_PROJECTION);
         GL11.glPushMatrix();
         GL11.glLoadIdentity();
         float aspect = (float) mc.displayWidth / (float) Math.max(1, mc.displayHeight);
-        Project.gluPerspective(70.0f, aspect, 0.1f, 1000.0f);
+        Project.gluPerspective(70.0f, aspect, 0.1f, 1200.0f);
         GL11.glMatrixMode(GL11.GL_MODELVIEW);
 
         GL11.glDisable(GL11.GL_FOG);
@@ -64,12 +61,12 @@ public class OrbitSkyRenderer extends IRenderHandler {
         GL11.glDepthMask(false);
         GL11.glDisable(GL11.GL_LIGHTING);
 
-        // 1. Fundo preto espacial absoluto
+        // 1. Espaço negro profundo
         GL11.glDisable(GL11.GL_TEXTURE_2D);
         GL11.glColor4f(0f, 0f, 0f, 1f);
         drawBlackBox();
 
-        // 2. Campo estelar pulsante com leve variação de temperatura de cor
+        // 2. Estrelas
         GL11.glPointSize(1.85f);
         GL11.glEnable(GL11.GL_POINT_SMOOTH);
         GL11.glBegin(GL11.GL_POINTS);
@@ -81,48 +78,41 @@ public class OrbitSkyRenderer extends IRenderHandler {
             float g = tint > 0.85f ? 0.88f : 0.96f;
             float b = tint > 0.85f ? 0.72f : 1.0f;
             GL11.glColor4f(tw * r, tw * g, tw * b, 1f);
-            GL11.glVertex3f(STARS[i][0] * 360f, STARS[i][1] * 360f, STARS[i][2] * 360f);
+            GL11.glVertex3f(STARS[i][0] * 380f, STARS[i][1] * 380f, STARS[i][2] * 380f);
         }
         GL11.glEnd();
         GL11.glDisable(GL11.GL_POINT_SMOOTH);
 
-        // 3. Terra esférica 3D gigante embaixo: D=235, R=192 -> topo a -43u e curvatura realista
-        float dist = 235.0f;
-        float radius = 192.0f;
-        float spinDeg = (float) ((t * 0.065) % 360.0);
+        // 3. Terra grande e bem próxima abaixo da estação (50%+ maior aparente)
+        float dist = 215.0f;
+        float radius = 178.0f;
+        float spinDeg = (float) ((t * 0.055) % 360.0);
 
-        // 3a. Halo atmosférico contínuo atrás do limbo (zero triângulos espetados)
         drawAtmosphereHalo(radius, dist);
 
-        // 3b. Esfera sólida texturizada da Terra com iluminação solar orbital realista
         GL11.glEnable(GL11.GL_TEXTURE_2D);
         mc.getTextureManager().bindTexture(EARTH);
         GL11.glPushMatrix();
         GL11.glTranslatef(0f, -dist, 0f);
         GL11.glRotatef(22.0f, 0f, 0f, 1f);
         GL11.glRotatef(spinDeg, 0f, 1f, 0f);
-        drawEarthSphere(radius, 44, 72, true);
+        drawEarthSphere(radius, 52, 88, true);
         GL11.glPopMatrix();
 
-        // 3c. Camada de nuvens girando independentemente logo acima da superfície
         mc.getTextureManager().bindTexture(EARTH_CLOUDS);
         GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
         GL11.glPushMatrix();
         GL11.glTranslatef(0f, -dist, 0f);
         GL11.glRotatef(22.0f, 0f, 0f, 1f);
-        GL11.glRotatef(spinDeg * 1.38f + 42.0f, 0f, 1f, 0f);
-        drawEarthSphere(radius * 1.007f, 40, 64, false);
+        GL11.glRotatef(spinDeg * 1.35f + 42.0f, 0f, 1f, 0f);
+        drawEarthSphere(radius * 1.006f, 44, 72, false);
         GL11.glPopMatrix();
 
-        // Restaura estado OpenGL e matriz de projeção do jogador
         GL11.glColor4f(1f, 1f, 1f, 1f);
         GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
         GL11.glDepthMask(true);
-        GL11.glDisable(GL11.GL_BLEND);
-        GL11.glEnable(GL11.GL_ALPHA_TEST);
         GL11.glEnable(GL11.GL_CULL_FACE);
-        GL11.glEnable(GL11.GL_FOG);
-        GL11.glEnable(GL11.GL_TEXTURE_2D);
+        GL11.glEnable(GL11.GL_ALPHA_TEST);
 
         GL11.glMatrixMode(GL11.GL_PROJECTION);
         GL11.glPopMatrix();
@@ -130,123 +120,74 @@ public class OrbitSkyRenderer extends IRenderHandler {
     }
 
     private void drawBlackBox() {
-        float s = 440f;
-        GL11.glBegin(GL11.GL_QUADS);
-        GL11.glColor4f(0f, 0f, 0f, 1f);
-        GL11.glVertex3f(-s, -s, -s); GL11.glVertex3f(s, -s, -s);
-        GL11.glVertex3f(s, s, -s); GL11.glVertex3f(-s, s, -s);
-
-        GL11.glVertex3f(-s, -s, s); GL11.glVertex3f(s, -s, s);
-        GL11.glVertex3f(s, s, s); GL11.glVertex3f(-s, s, s);
-
-        GL11.glVertex3f(-s, -s, -s); GL11.glVertex3f(-s, s, -s);
-        GL11.glVertex3f(-s, s, s); GL11.glVertex3f(-s, -s, s);
-
-        GL11.glVertex3f(s, -s, -s); GL11.glVertex3f(s, s, -s);
-        GL11.glVertex3f(s, s, s); GL11.glVertex3f(s, -s, s);
-
-        GL11.glVertex3f(-s, -s, -s); GL11.glVertex3f(s, -s, -s);
-        GL11.glVertex3f(s, -s, s); GL11.glVertex3f(-s, -s, s);
-
-        GL11.glVertex3f(-s, s, -s); GL11.glVertex3f(s, s, -s);
-        GL11.glVertex3f(s, s, s); GL11.glVertex3f(-s, s, s);
-        GL11.glEnd();
+        float s = 480f;
+        Tessellator tess = Tessellator.instance;
+        tess.startDrawingQuads();
+        tess.addVertex(-s, -s, -s); tess.addVertex(s, -s, -s); tess.addVertex(s, -s, s); tess.addVertex(-s, -s, s);
+        tess.addVertex(-s, s, s); tess.addVertex(s, s, s); tess.addVertex(s, s, -s); tess.addVertex(-s, s, -s);
+        tess.addVertex(-s, -s, -s); tess.addVertex(-s, s, -s); tess.addVertex(s, s, -s); tess.addVertex(s, -s, -s);
+        tess.addVertex(s, -s, s); tess.addVertex(s, s, s); tess.addVertex(-s, s, s); tess.addVertex(-s, -s, s);
+        tess.addVertex(-s, -s, s); tess.addVertex(-s, s, s); tess.addVertex(-s, s, -s); tess.addVertex(-s, -s, -s);
+        tess.addVertex(s, -s, -s); tess.addVertex(s, s, -s); tess.addVertex(s, s, s); tess.addVertex(s, -s, s);
+        tess.draw();
     }
 
-    /**
-     * Anel contínuo ao redor da tangente exata da esfera vista da câmera (0,0,0),
-     * criando um brilho atmosférico azul suave sem nenhum triângulo saltando fora.
-     */
     private void drawAtmosphereHalo(float radius, float dist) {
-        double tangentY = -dist + (double) (radius * radius) / dist;
-        double tangentR = radius * Math.sqrt(dist * dist - radius * radius) / dist;
-        double rInner = tangentR * 0.90;
-        double rMid = tangentR * 1.005;
-        double rOuter = tangentR * 1.075;
-        int segs = 96;
-
         GL11.glDisable(GL11.GL_TEXTURE_2D);
         GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE);
-
-        Tessellator t = Tessellator.instance;
-        t.startDrawing(GL11.GL_QUAD_STRIP);
+        Tessellator tess = Tessellator.instance;
+        int segs = 72;
+        float rInner = radius * 0.992f;
+        float rOuter = radius * 1.075f;
+        GL11.glPushMatrix();
+        GL11.glTranslatef(0f, -dist, 0f);
+        tess.startDrawing(GL11.GL_QUAD_STRIP);
         for (int i = 0; i <= segs; i++) {
             double a = Math.PI * 2.0 * i / segs;
-            double cos = Math.cos(a);
-            double sin = Math.sin(a);
-            t.setColorRGBA_F(0.28f, 0.72f, 1.0f, 0.42f);
-            t.addVertex(cos * rInner, tangentY, sin * rInner);
-            t.setColorRGBA_F(0.32f, 0.76f, 1.0f, 0.36f);
-            t.addVertex(cos * rMid, tangentY, sin * rMid);
+            float cx = (float) Math.cos(a);
+            float cz = (float) Math.sin(a);
+            tess.setColorRGBA_F(0.24f, 0.58f, 1.0f, 0.34f);
+            tess.addVertex(cx * rInner, 28f, cz * rInner);
+            tess.setColorRGBA_F(0.10f, 0.36f, 0.95f, 0.0f);
+            tess.addVertex(cx * rOuter, 28f, cz * rOuter);
         }
-        t.draw();
-
-        t.startDrawing(GL11.GL_QUAD_STRIP);
-        for (int i = 0; i <= segs; i++) {
-            double a = Math.PI * 2.0 * i / segs;
-            double cos = Math.cos(a);
-            double sin = Math.sin(a);
-            t.setColorRGBA_F(0.32f, 0.76f, 1.0f, 0.36f);
-            t.addVertex(cos * rMid, tangentY, sin * rMid);
-            t.setColorRGBA_F(0.10f, 0.45f, 0.95f, 0.0f);
-            t.addVertex(cos * rOuter, tangentY, sin * rOuter);
-        }
-        t.draw();
-
+        tess.draw();
+        GL11.glPopMatrix();
         GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-        GL11.glEnable(GL11.GL_TEXTURE_2D);
     }
 
-    private void drawEarthSphere(float radius, int latSteps, int lonSteps, boolean isSurface) {
-        // Vetor solar fixo em espaço local simplificado para dar volume diurno/crepuscular
-        float sunX = 0.58f, sunY = 0.72f, sunZ = 0.38f;
-        Tessellator t = Tessellator.instance;
-        for (int lat = 0; lat < latSteps; lat++) {
-            double v0 = (double) lat / latSteps;
-            double v1 = (double) (lat + 1) / latSteps;
-            double phi0 = (v0 - 0.5) * Math.PI;
-            double phi1 = (v1 - 0.5) * Math.PI;
+    private void drawEarthSphere(float radius, int stacks, int slices, boolean litSurface) {
+        Tessellator tess = Tessellator.instance;
+        for (int i = 0; i < stacks; i++) {
+            double phi0 = Math.PI * i / stacks;
+            double phi1 = Math.PI * (i + 1) / stacks;
+            float v0 = (float) i / stacks;
+            float v1 = (float) (i + 1) / stacks;
+            tess.startDrawing(GL11.GL_QUAD_STRIP);
+            for (int j = 0; j <= slices; j++) {
+                double th = 2.0 * Math.PI * j / slices;
+                float u = (float) j / slices;
+                float x0 = (float) (Math.sin(phi0) * Math.cos(th));
+                float y0 = (float) Math.cos(phi0);
+                float z0 = (float) (Math.sin(phi0) * Math.sin(th));
+                float x1 = (float) (Math.sin(phi1) * Math.cos(th));
+                float y1 = (float) Math.cos(phi1);
+                float z1 = (float) (Math.sin(phi1) * Math.sin(th));
 
-            double cos0 = Math.cos(phi0), sin0 = Math.sin(phi0);
-            double cos1 = Math.cos(phi1), sin1 = Math.sin(phi1);
-
-            t.startDrawing(GL11.GL_QUAD_STRIP);
-            for (int lon = 0; lon <= lonSteps; lon++) {
-                double u = (double) lon / lonSteps;
-                double theta = u * Math.PI * 2.0;
-                double ct = Math.cos(theta);
-                double st = Math.sin(theta);
-
-                float nx1 = (float) (cos1 * ct);
-                float ny1 = (float) sin1;
-                float nz1 = (float) (cos1 * st);
-                float l1 = shadeVertex(nx1, ny1, nz1, sunX, sunY, sunZ, isSurface);
-                if (isSurface) {
-                    t.setColorRGBA_F(l1 * 0.96f, l1 * 0.98f, Math.min(1f, l1 * 1.04f), 1.0f);
+                if (litSurface) {
+                    float l0 = Math.max(0.18f, 0.44f + 0.56f * (y0 * 0.65f + x0 * 0.55f));
+                    float l1 = Math.max(0.18f, 0.44f + 0.56f * (y1 * 0.65f + x1 * 0.55f));
+                    tess.setColorRGBA_F(l0, l0, Math.min(1f, l0 * 1.04f), 1.0f);
+                    tess.addVertexWithUV(x0 * radius, y0 * radius, z0 * radius, u, v0);
+                    tess.setColorRGBA_F(l1, l1, Math.min(1f, l1 * 1.04f), 1.0f);
+                    tess.addVertexWithUV(x1 * radius, y1 * radius, z1 * radius, u, v1);
                 } else {
-                    t.setColorRGBA_F(0.95f * l1, 0.98f * l1, 1.0f * l1, 0.85f);
+                    tess.setColorRGBA_F(1f, 1f, 1f, 0.90f);
+                    tess.addVertexWithUV(x0 * radius, y0 * radius, z0 * radius, u, v0);
+                    tess.addVertexWithUV(x1 * radius, y1 * radius, z1 * radius, u, v1);
                 }
-                t.addVertexWithUV(nx1 * radius, ny1 * radius, nz1 * radius, u, v1);
-
-                float nx0 = (float) (cos0 * ct);
-                float ny0 = (float) sin0;
-                float nz0 = (float) (cos0 * st);
-                float l0 = shadeVertex(nx0, ny0, nz0, sunX, sunY, sunZ, isSurface);
-                if (isSurface) {
-                    t.setColorRGBA_F(l0 * 0.96f, l0 * 0.98f, Math.min(1f, l0 * 1.04f), 1.0f);
-                } else {
-                    t.setColorRGBA_F(0.95f * l0, 0.98f * l0, 1.0f * l0, 0.85f);
-                }
-                t.addVertexWithUV(nx0 * radius, ny0 * radius, nz0 * radius, u, v0);
             }
-            t.draw();
+            tess.draw();
         }
-    }
-
-    private float shadeVertex(float nx, float ny, float nz, float sx, float sy, float sz, boolean isSurface) {
-        float dot = nx * sx + ny * sy + nz * sz;
-        float sun = Math.max(0f, dot);
-        float ambient = isSurface ? 0.42f : 0.48f;
-        return Math.min(1.0f, ambient + sun * 0.62f);
     }
 }
