@@ -1,12 +1,16 @@
 package com.orbitalsunworks.satellite;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
+import net.minecraft.entity.item.EntityItem;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
+import net.minecraft.nbt.NBTTagString;
 import net.minecraft.network.NetworkManager;
 import net.minecraft.network.Packet;
 import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
@@ -14,13 +18,15 @@ import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.AxisAlignedBB;
 
 import com.orbitalsunworks.OSItems;
+import com.orbitalsunworks.item.ItemModule;
 
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
 /**
  * Tile da estrutura do satélite na dimensão orbital.
- * Inclui getRenderBoundingBox() amplo para não sumir ao olhar de lado.
+ * Suporta todos os módulos T1-T3, ejeção de módulos na órbita
+ * e reparo imediato (+10% por Kit de Reparo).
  */
 public class TileOrbitSatellite extends TileEntity implements IInventory {
 
@@ -37,13 +43,14 @@ public class TileOrbitSatellite extends TileEntity implements IInventory {
     private float clientHealth = 1.0f;
     private long clientGen = 0L;
     private boolean clientShield = false;
+    private final List<String> clientModules = new ArrayList<String>();
 
     @Override
     @SideOnly(Side.CLIENT)
     public AxisAlignedBB getRenderBoundingBox() {
         return AxisAlignedBB.getBoundingBox(
-            this.xCoord - 9.0, this.yCoord - 2.0, this.zCoord - 9.0,
-            this.xCoord + 10.0, this.yCoord + 7.5, this.zCoord + 10.0);
+            this.xCoord - 10.0, this.yCoord - 2.0, this.zCoord - 10.0,
+            this.xCoord + 11.0, this.yCoord + 8.5, this.zCoord + 11.0);
     }
 
     public void setSatelliteId(UUID id) {
@@ -95,11 +102,34 @@ public class TileOrbitSatellite extends TileEntity implements IInventory {
     }
 
     public boolean hasDebrisShield() {
+        return this.getShieldTier() > 0 || (this.worldObj != null && this.worldObj.isRemote && this.clientShield);
+    }
+
+    public List<String> getInstalledModules() {
         if (this.worldObj != null && this.worldObj.isRemote) {
-            return this.clientShield;
+            return new ArrayList<String>(this.clientModules);
         }
         SatelliteManager.Satellite sat = getSatellite();
-        return sat != null && sat.hasDebrisShield();
+        return sat != null ? new ArrayList<String>(sat.modules) : new ArrayList<String>();
+    }
+
+    public int getShieldTier() {
+        int best = 0;
+        for (String mod : this.getInstalledModules()) {
+            int st = ItemModule.getShieldTier(mod);
+            if (st > best) {
+                best = st;
+            }
+        }
+        return best;
+    }
+
+    public int getEfficiencyBonusPercent() {
+        int total = 0;
+        for (String mod : this.getInstalledModules()) {
+            total += ItemModule.getEfficiencyPercent(mod);
+        }
+        return total;
     }
 
     public void setClientStats(float health, int tier, boolean shield) {
@@ -125,20 +155,19 @@ public class TileOrbitSatellite extends TileEntity implements IInventory {
 
         for (int i = 0; i < MODULE_SLOTS; i++) {
             ItemStack stack = this.slots[i];
-            if (stack != null && stack.getItem() == OSItems.itemModuleDebrisShield
-                    && !sat.modules.contains("debrisShield")) {
-                sat.modules.add("debrisShield");
-                manager.markDirty();
-                this.decrStackSize(i, 1);
-                this.worldObj.playSoundEffect(this.xCoord + 0.5, this.yCoord + 0.5,
-                    this.zCoord + 0.5, "random.orb", 0.6f, 1.4f);
-                changed = true;
+            if (stack != null && stack.getItem() instanceof ItemModule) {
+                String modId = ((ItemModule) stack.getItem()).getModuleId();
+                if (manager.addModuleToSatellite(this.satelliteId, modId)) {
+                    this.decrStackSize(i, 1);
+                    this.worldObj.playSoundEffect(this.xCoord + 0.5, this.yCoord + 0.5,
+                        this.zCoord + 0.5, "random.orb", 0.6f, 1.4f);
+                    changed = true;
+                }
             }
         }
 
         ItemStack repair = this.slots[REPAIR_SLOT];
-        if (repair != null && repair.getItem() == OSItems.ingotTitaniumAlloy
-                && sat.health < 1.0f) {
+        if (repair != null && repair.getItem() == OSItems.itemRepairKit && sat.health < 1.0f) {
             manager.repairSatellite(this.satelliteId, REPAIR_AMOUNT);
             this.decrStackSize(REPAIR_SLOT, 1);
             this.worldObj.playSoundEffect(this.xCoord + 0.5, this.yCoord + 0.5,
@@ -151,24 +180,41 @@ public class TileOrbitSatellite extends TileEntity implements IInventory {
         }
     }
 
-    public void ejectModule(String moduleId) {
-        SatelliteManager.Satellite sat = getSatellite();
-        if (sat == null) {
+    public void ejectModuleAt(int index) {
+        if (this.worldObj == null || this.worldObj.isRemote || this.satelliteId == null) {
             return;
         }
-        if (sat.modules.remove(moduleId)) {
-            SatelliteManager.get(this.worldObj).markDirty();
-            net.minecraft.entity.item.EntityItem drop = new net.minecraft.entity.item.EntityItem(
-                this.worldObj, this.xCoord + 0.5, this.yCoord + 0.5, this.zCoord + 0.5,
-                new ItemStack(OSItems.itemModuleDebrisShield));
-            this.worldObj.spawnEntityInWorld(drop);
+        String removed = SatelliteManager.get(this.worldObj).removeModuleAt(this.satelliteId, index);
+        if (removed != null) {
+            ItemStack dropStack = ItemModule.stackForModuleId(removed);
+            if (dropStack != null) {
+                EntityItem drop = new EntityItem(this.worldObj,
+                    this.xCoord + 0.5, this.yCoord + 0.6, this.zCoord + 0.5, dropStack);
+                drop.motionX = (this.worldObj.rand.nextDouble() - 0.5) * 0.08;
+                drop.motionY = 0.14;
+                drop.motionZ = (this.worldObj.rand.nextDouble() - 0.5) * 0.08;
+                this.worldObj.spawnEntityInWorld(drop);
+            }
+            this.worldObj.playSoundEffect(this.xCoord + 0.5, this.yCoord + 0.5,
+                this.zCoord + 0.5, "tile.piston.out", 0.6f, 1.25f);
             this.syncToClients();
+        }
+    }
+
+    public void ejectModule(String moduleId) {
+        SatelliteManager.Satellite sat = getSatellite();
+        if (sat == null || moduleId == null) {
+            return;
+        }
+        int idx = sat.modules.indexOf(moduleId);
+        if (idx >= 0) {
+            this.ejectModuleAt(idx);
         }
     }
 
     @Override
     public void updateEntity() {
-        if (!this.worldObj.isRemote && this.worldObj.getTotalWorldTime() % 20 == 0) {
+        if (!this.worldObj.isRemote && this.worldObj.getTotalWorldTime() % 5 == 0) {
             this.processSlots();
         }
     }
@@ -216,6 +262,9 @@ public class TileOrbitSatellite extends TileEntity implements IInventory {
             stack.stackSize = getInventoryStackLimit();
         }
         markDirty();
+        if (this.worldObj != null && !this.worldObj.isRemote) {
+            this.processSlots();
+        }
     }
 
     @Override
@@ -256,9 +305,9 @@ public class TileOrbitSatellite extends TileEntity implements IInventory {
             return false;
         }
         if (slot < MODULE_SLOTS) {
-            return stack.getItem() instanceof com.orbitalsunworks.item.ItemModule;
+            return stack.getItem() instanceof ItemModule;
         }
-        return stack.getItem() == OSItems.ingotTitaniumAlloy;
+        return stack.getItem() == OSItems.itemRepairKit;
     }
 
     @Override
@@ -277,6 +326,14 @@ public class TileOrbitSatellite extends TileEntity implements IInventory {
             this.clientHealth = tag.getFloat("ClientHealth");
             this.clientGen = tag.getLong("ClientGen");
             this.clientShield = tag.getBoolean("ClientShield");
+            this.clientModules.clear();
+            NBTTagList mList = tag.getTagList("ClientModules", 8);
+            for (int i = 0; i < mList.tagCount(); i++) {
+                this.clientModules.add(mList.getStringTagAt(i));
+            }
+        }
+        for (int i = 0; i < TOTAL_SLOTS; i++) {
+            this.slots[i] = null;
         }
         NBTTagList list = tag.getTagList("Items", 10);
         for (int i = 0; i < list.tagCount(); i++) {
@@ -317,6 +374,11 @@ public class TileOrbitSatellite extends TileEntity implements IInventory {
             tag.setFloat("ClientHealth", sat.health);
             tag.setLong("ClientGen", sat.generationRFt);
             tag.setBoolean("ClientShield", sat.hasDebrisShield());
+            NBTTagList mList = new NBTTagList();
+            for (String m : sat.modules) {
+                mList.appendTag(new NBTTagString(m));
+            }
+            tag.setTag("ClientModules", mList);
         }
         return new S35PacketUpdateTileEntity(this.xCoord, this.yCoord, this.zCoord, 1, tag);
     }

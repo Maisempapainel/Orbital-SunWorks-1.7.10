@@ -9,9 +9,8 @@ import com.orbitalsunworks.satellite.SatelliteManager;
 import com.orbitalsunworks.satellite.TileOrbitSatellite;
 
 /**
- * Monta e mantém a âncora central clicável (1x3x1) dos satélites em órbita.
- * A colisão dinâmica completa (incluindo as asas solares giratórias e o prato)
- * fica a cargo de SatelliteCollisionPhysics.
+ * Monta, mantém e remove a âncora central clicável (1x3x1) dos satélites em órbita.
+ * Usa orbitSlot persistente para que a destruição de um satélite nunca desloque os demais.
  */
 public final class OrbitStructureManager {
 
@@ -21,11 +20,15 @@ public final class OrbitStructureManager {
     private OrbitStructureManager() {
     }
 
-    public static int[] coordsForIndex(int index) {
-        return new int[]{ 8 + index * SPACING, BASE_Y, 8 };
+    public static int[] coordsForIndex(int slotIndex) {
+        int safe = Math.max(0, slotIndex);
+        return new int[]{ 8 + safe * SPACING, BASE_Y, 8 };
     }
 
     public static int indexOf(SatelliteManager.Satellite sat, SatelliteManager manager) {
+        if (sat != null && sat.orbitSlot >= 0) {
+            return sat.orbitSlot;
+        }
         int idx = 0;
         for (SatelliteManager.Satellite s : manager.getSatellites()) {
             if (s == sat) {
@@ -58,7 +61,6 @@ public final class OrbitStructureManager {
         int[] c = coordsForIndex(index);
         int x = c[0], y = c[1], z = c[2];
 
-        // Remove eventuais blocos estáticos laterais legados que não giravam com os painéis
         for (int dx = -2; dx <= 2; dx++) {
             for (int dz = -2; dz <= 2; dz++) {
                 if (dx == 0 && dz == 0) {
@@ -86,7 +88,6 @@ public final class OrbitStructureManager {
             }
         }
 
-        // Coluna central 1x3x1 clicável (meta 0 = âncora com TileEntity)
         orbit.setBlock(x, y, z, OSBlocks.blockOrbitSatellite, 0, 3);
         orbit.setBlock(x, y + 1, z, OSBlocks.blockOrbitSatellite, 1, 3);
         orbit.setBlock(x, y + 2, z, OSBlocks.blockOrbitSatellite, 2, 3);
@@ -95,6 +96,27 @@ public final class OrbitStructureManager {
             TileOrbitSatellite satTile = (TileOrbitSatellite) te;
             satTile.setSatelliteId(sat.id);
             satTile.syncToClients();
+        }
+    }
+
+    public static void removeStructure(World anyWorld, int orbitSlot) {
+        if (orbitSlot < 0) {
+            return;
+        }
+        int dim = OrbitDimensionManager.getDimensionId();
+        if (dim < 0) {
+            return;
+        }
+        WorldServer orbit = net.minecraftforge.common.DimensionManager.getWorld(dim);
+        if (orbit == null) {
+            return;
+        }
+        int[] c = coordsForIndex(orbitSlot);
+        int x = c[0], y = c[1], z = c[2];
+        for (int dy = 3; dy >= 0; dy--) {
+            if (orbit.getBlock(x, y + dy, z) == OSBlocks.blockOrbitSatellite) {
+                orbit.setBlockToAir(x, y + dy, z);
+            }
         }
     }
 }

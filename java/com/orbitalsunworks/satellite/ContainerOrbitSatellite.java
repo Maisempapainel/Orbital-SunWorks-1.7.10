@@ -1,5 +1,7 @@
 package com.orbitalsunworks.satellite;
 
+import java.util.List;
+
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.InventoryPlayer;
 import net.minecraft.inventory.Container;
@@ -7,15 +9,16 @@ import net.minecraft.inventory.ICrafting;
 import net.minecraft.inventory.Slot;
 import net.minecraft.item.ItemStack;
 
+import com.orbitalsunworks.OSItems;
+import com.orbitalsunworks.item.ItemModule;
+
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
 /**
- * Container da estrutura do satélite orbital (176x214).
- * Slots alinhados ao padrão do ContainerRocket:
- *  - 0, 1: módulos em (22, 79) e (48, 79)
- *  - 2: reparo em (124, 79)
- *  - Inventário do jogador: y=118 (3x9) e hotbar y=176
+ * Container do satélite orbital (176x214).
+ * Slots: 0 e 1 (módulos) em (22, 79) e (48, 79);
+ * Slot 2 (Kit de Reparo) em (124, 79).
  */
 public class ContainerOrbitSatellite extends Container {
 
@@ -24,11 +27,11 @@ public class ContainerOrbitSatellite extends Container {
     private int lastTier = -1;
     private int lastShield = -1;
     private long lastGen = -1L;
+    private int lastModSig = 0;
 
     public ContainerOrbitSatellite(InventoryPlayer playerInv, TileOrbitSatellite tile) {
         this.tile = tile;
 
-        // Slots de módulos (0-1)
         addSlotToContainer(new Slot(tile, 0, 22, 79) {
             @Override
             public boolean isItemValid(ItemStack stack) {
@@ -41,8 +44,6 @@ public class ContainerOrbitSatellite extends Container {
                 return this.inventory.isItemValidForSlot(this.getSlotIndex(), stack);
             }
         });
-
-        // Slot de reparo (2)
         addSlotToContainer(new Slot(tile, TileOrbitSatellite.REPAIR_SLOT, 124, 79) {
             @Override
             public boolean isItemValid(ItemStack stack) {
@@ -50,7 +51,6 @@ public class ContainerOrbitSatellite extends Container {
             }
         });
 
-        // Inventário do jogador (mesmas posições exatas do ContainerRocket)
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
                 addSlotToContainer(new Slot(playerInv, col + row * 9 + 9,
@@ -80,9 +80,11 @@ public class ContainerOrbitSatellite extends Container {
         int tier = this.tile.getTier();
         int shield = this.tile.hasDebrisShield() ? 1 : 0;
         long gen = this.tile.getGenerationRFt();
+        List<String> mods = this.tile.getInstalledModules();
+        int modSig = mods.hashCode() + mods.size() * 31;
 
         if (healthInt != this.lastHealthInt || tier != this.lastTier
-            || shield != this.lastShield || gen != this.lastGen) {
+            || shield != this.lastShield || gen != this.lastGen || modSig != this.lastModSig) {
             this.tile.syncToClients();
             for (Object o : this.crafters) {
                 ICrafting crafter = (ICrafting) o;
@@ -94,6 +96,7 @@ public class ContainerOrbitSatellite extends Container {
             this.lastTier = tier;
             this.lastShield = shield;
             this.lastGen = gen;
+            this.lastModSig = modSig;
         }
     }
 
@@ -126,15 +129,14 @@ public class ContainerOrbitSatellite extends Container {
         }
         ItemStack stack = slot.getStack();
         ItemStack copy = stack.copy();
-
         if (slotIndex < TileOrbitSatellite.TOTAL_SLOTS) {
             if (!this.mergeItemStack(stack, TileOrbitSatellite.TOTAL_SLOTS,
                 this.inventorySlots.size(), true)) {
                 return null;
             }
         } else {
-            boolean isModule = stack.getItem() instanceof com.orbitalsunworks.item.ItemModule;
-            boolean isRepair = stack.getItem() == com.orbitalsunworks.OSItems.ingotTitaniumAlloy;
+            boolean isModule = stack.getItem() instanceof ItemModule;
+            boolean isRepair = stack.getItem() == OSItems.itemRepairKit;
             if (isModule) {
                 if (!this.mergeItemStack(stack, 0, TileOrbitSatellite.MODULE_SLOTS, false)) {
                     return null;
@@ -148,7 +150,6 @@ public class ContainerOrbitSatellite extends Container {
                 return null;
             }
         }
-
         if (stack.stackSize == 0) {
             slot.putStack(null);
         } else {
