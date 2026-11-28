@@ -6,7 +6,6 @@ import net.minecraft.client.audio.PositionedSoundRecord;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.client.renderer.entity.RenderItem;
-import net.minecraft.init.Blocks;
 import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
@@ -22,10 +21,7 @@ import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
 /**
- * Manual aeroespacial dividido em 3 sessões clicáveis:
- *  1. Tutorial (explicação completa de cada sistema/item interagível)
- *  2. Craftings (Fornalha, Mesa 3x3, Estação 3x5 com tempos e tooltips)
- *  3. Multiblocks (diagramas visuais da Plataforma 7x7, Foguetes e Satélite)
+ * Manual Orbital Sunworks — HUD aeroespacial com 3 sessões (Tutorial / Craftings / Multiblocks).
  */
 @SideOnly(Side.CLIENT)
 public class GuiManual extends GuiScreen {
@@ -41,7 +37,6 @@ public class GuiManual extends GuiScreen {
     private List<ManualData.Page> sectionPages;
     private int pageIndex = 0;
     private int listScroll = 0;
-
     private int guiLeft;
     private int guiTop;
 
@@ -73,41 +68,39 @@ public class GuiManual extends GuiScreen {
         this.sectionPages = ManualData.buildSection(section);
         this.pageIndex = 0;
         this.listScroll = 0;
-        this.playClick(1.1f);
+        this.playClick(1.15f);
     }
 
     private void selectPage(int idx) {
-        if (idx < 0 || idx >= this.sectionPages.size()) {
+        if (this.sectionPages.isEmpty()) {
             return;
         }
-        this.pageIndex = idx;
+        this.pageIndex = Math.max(0, Math.min(this.sectionPages.size() - 1, idx));
         if (this.pageIndex < this.listScroll) {
             this.listScroll = this.pageIndex;
         } else if (this.pageIndex >= this.listScroll + LIST_ROWS) {
             this.listScroll = this.pageIndex - LIST_ROWS + 1;
         }
-        this.playClick(1.25f);
+        this.playClick(0.95f);
     }
 
     @Override
     public void drawScreen(int mouseX, int mouseY, float partialTicks) {
         this.hoveredTooltipStack = null;
         this.hoveredCustomTooltip = null;
-
         this.drawDefaultBackground();
         GL11.glColor4f(1f, 1f, 1f, 1f);
 
         int x0 = this.guiLeft;
         int y0 = this.guiTop;
 
-        // Painel principal + cabeçalho
         GuiTheme.drawAerospacePanel(x0, y0, GUI_W, GUI_H);
         GuiTheme.drawHeaderBar(x0 + 2, y0 + 2, GUI_W - 4, 18);
 
         String header = "ORBITAL SUNWORKS  \u2022  MANUAL T\u00c9CNICO";
         this.fontRendererObj.drawStringWithShadow(header, x0 + 10, y0 + 7, GuiTheme.TEXT_TITLE);
 
-        // 3 abas de sessão no topo
+        // 3 abas de sessão
         String[] tabNames = { "1. TUTORIAL", "2. CRAFTINGS", "3. MULTIBLOCKS" };
         int tabX = x0 + 8;
         int tabY = y0 + 23;
@@ -141,7 +134,6 @@ public class GuiManual extends GuiScreen {
         if (this.listScroll > maxScroll) {
             this.listScroll = maxScroll;
         }
-
         int visible = Math.min(LIST_ROWS, total - this.listScroll);
         for (int i = 0; i < visible; i++) {
             int idx = this.listScroll + i;
@@ -152,20 +144,18 @@ public class GuiManual extends GuiScreen {
             int rh = LIST_ROW_H - 2;
             boolean sel = (idx == this.pageIndex);
             boolean hov = inBox(mouseX, mouseY, rx, ry, rw, rh);
-
             if (sel) {
                 drawRect(rx, ry, rx + rw, ry + rh, 0xFF194B6B);
                 drawRect(rx, ry, rx + 2, ry + rh, GuiTheme.ACCENT_CYAN);
             } else if (hov) {
                 drawRect(rx, ry, rx + rw, ry + rh, 0xFF142436);
             }
-
             String label = this.fontRendererObj.trimStringToWidth(pg.title, rw - 6);
             this.fontRendererObj.drawString(label, rx + 5, ry + 3,
                 sel ? 0xFFFFFF : (hov ? 0xBBEFFF : GuiTheme.TEXT_LABEL));
         }
 
-        // Setas de rolagem da lista lateral
+        // Scrollbar lateral
         int sbX = sideX + sideW - 10;
         boolean hovUp = inBox(mouseX, mouseY, sbX, sideY + 4, 8, 12);
         boolean hovDn = inBox(mouseX, mouseY, sbX, sideY + sideH - 16, 8, 12);
@@ -174,7 +164,6 @@ public class GuiManual extends GuiScreen {
             this.listScroll > 0 ? (hovUp ? 0xFFFFFF : 0x55E0FF) : 0x2F4052);
         this.fontRendererObj.drawString("\u25bc", sbX + 1, sideY + sideH - 14,
             this.listScroll < maxScroll ? (hovDn ? 0xFFFFFF : 0x55E0FF) : 0x2F4052);
-
         if (total > LIST_ROWS) {
             int trackH = sideH - 36;
             int thumbH = Math.max(12, trackH * LIST_ROWS / total);
@@ -188,13 +177,12 @@ public class GuiManual extends GuiScreen {
         int viewW = 167;
         int viewH = 148;
         GuiTheme.drawSubPanel(viewX, viewY, viewW, viewH);
-
         if (!this.sectionPages.isEmpty()) {
             ManualData.Page cur = this.sectionPages.get(this.pageIndex);
             this.drawContentPage(cur, viewX, viewY, viewW, viewH, mouseX, mouseY);
         }
 
-        // Barra de rodapé com Anterior / Contador / Próxima
+        // Barra de rodapé
         int footY = y0 + GUI_H - 22;
         boolean hovPrev = this.pageIndex > 0 && inBox(mouseX, mouseY, x0 + 8, footY, 64, 15);
         boolean hovNext = this.pageIndex < total - 1 && inBox(mouseX, mouseY, x0 + GUI_W - 72, footY, 64, 15);
@@ -206,7 +194,7 @@ public class GuiManual extends GuiScreen {
             x0 + (GUI_W - this.fontRendererObj.getStringWidth(pageCounter)) / 2,
             footY + 4, GuiTheme.TEXT_LABEL);
 
-        // Tooltips sempre desenhados por último (acima de todos os ícones)
+        // Tooltips acima de tudo
         GL11.glDisable(GL11.GL_LIGHTING);
         if (this.hoveredTooltipStack != null) {
             @SuppressWarnings("unchecked")
@@ -221,17 +209,16 @@ public class GuiManual extends GuiScreen {
     }
 
     private void drawContentPage(ManualData.Page page, int vx, int vy, int vw, int vh, int mouseX, int mouseY) {
-        // Cabeçalho interno do tópico
         drawRect(vx + 1, vy + 1, vx + vw - 1, vy + 22, 0xFF112033);
         drawRect(vx + 1, vy + 22, vx + vw - 1, vy + 23, GuiTheme.BORDER_SUB);
-
         String title = this.fontRendererObj.trimStringToWidth(page.title, vw - 14);
         this.fontRendererObj.drawStringWithShadow(title, vx + 7, vy + 5, 0xFFFFFF);
 
         GuiTheme.drawBadge(this.fontRendererObj, vx + 7, vy + 26, page.badge,
             0xFF14354D, GuiTheme.BORDER_MAIN, GuiTheme.TEXT_TITLE);
 
-        if (page.type == ManualData.TYPE_STATION && page.craftSeconds > 0) {
+        if ((page.type == ManualData.TYPE_STATION || page.type == ManualData.TYPE_MACHINE)
+                && page.craftSeconds > 0) {
             String timeTxt = page.craftSeconds + "s";
             GuiTheme.drawBadge(this.fontRendererObj,
                 vx + vw - 16 - this.fontRendererObj.getStringWidth(timeTxt), vy + 26,
@@ -259,19 +246,27 @@ public class GuiManual extends GuiScreen {
             int iy = vy + 46;
             GuiTheme.drawSlotBox(cx - 46, iy - 1);
             drawItemIcon(page.grid[0], cx - 45, iy, 1, mouseX, mouseY);
-
             GuiTheme.drawSlotBox(cx - 46, iy + 27);
             drawItemIcon(new ItemStack(Items.coal), cx - 45, iy + 28, 1, mouseX, mouseY);
-
-            // Chama da fornalha
             drawRect(cx - 41, iy + 18, cx - 33, iy + 25, 0xFFFF8822);
             drawRect(cx - 39, iy + 19, cx - 35, iy + 24, 0xFFFFE577);
-
             drawArrow(cx - 16, iy + 14);
-
             GuiTheme.drawSlotBox(cx + 18, iy + 8, GuiTheme.ACCENT_CYAN, 0xFF183044);
             drawItemIcon(page.result, cx + 19, iy + 9, page.resultCount, mouseX, mouseY);
+            drawWrappedText(page.description, vx + 7, vy + 98, vw - 14, vy + vh - 6, GuiTheme.TEXT_LABEL);
+            return;
+        }
 
+        if (page.type == ManualData.TYPE_MACHINE) {
+            int cx = vx + vw / 2;
+            int iy = vy + 52;
+            GuiTheme.drawSlotBox(cx - 50, iy - 1);
+            drawItemIcon(page.grid[0], cx - 49, iy, 1, mouseX, mouseY);
+            this.fontRendererObj.drawString("5.000 mB", cx - 58, iy + 20, GuiTheme.TEXT_GOLD);
+            drawArrow(cx - 12, iy + 4);
+            this.fontRendererObj.drawString("8k RF/t", cx - 18, iy + 20, 0xFFFF7070);
+            GuiTheme.drawSlotBox(cx + 22, iy - 1, GuiTheme.ACCENT_CYAN, 0xFF183044);
+            drawItemIcon(page.result, cx + 23, iy, page.resultCount, mouseX, mouseY);
             drawWrappedText(page.description, vx + 7, vy + 98, vw - 14, vy + vh - 6, GuiTheme.TEXT_LABEL);
             return;
         }
@@ -281,7 +276,6 @@ public class GuiManual extends GuiScreen {
             int gridW = cols * 18;
             int gx = vx + (vw - (gridW + 44)) / 2;
             int gy = vy + 43;
-
             for (int row = 0; row < 3; row++) {
                 for (int col = 0; col < cols; col++) {
                     int sx = gx + col * 18;
@@ -290,15 +284,12 @@ public class GuiManual extends GuiScreen {
                     drawItemIcon(page.grid[row * 5 + col], sx + 1, sy + 1, 1, mouseX, mouseY);
                 }
             }
-
             int arrowX = gx + gridW + 5;
             drawArrow(arrowX, gy + 23);
-
             int outX = arrowX + 21;
             int outY = gy + 18;
             GuiTheme.drawSlotBox(outX, outY, GuiTheme.ACCENT_CYAN, 0xFF183044);
             drawItemIcon(page.result, outX + 1, outY + 1, page.resultCount, mouseX, mouseY);
-
             drawWrappedText(page.description, vx + 7, gy + 59, vw - 14, vy + vh - 5, GuiTheme.TEXT_LABEL);
             return;
         }
@@ -310,6 +301,40 @@ public class GuiManual extends GuiScreen {
     }
 
     private void drawMultiblockDiagram(ManualData.Page page, int vx, int topY, int vw, int mouseX, int mouseY) {
+        if (page.multiblockId == ManualData.MB_OIL_EXTRACTOR) {
+            int cell = 20;
+            int size = 3 * cell;
+            int bx = vx + (vw - size) / 2;
+            int by = topY + 8;
+            drawRect(bx - 4, by - 4, bx + size + 4, by + size + 4, 0xFF0A1420);
+            for (int r = 0; r < 3; r++) {
+                for (int c = 0; c < 3; c++) {
+                    int cx = bx + c * cell;
+                    int cy = by + r * cell;
+                    boolean center = (r == 1 && c == 1);
+                    boolean rfPort = (r == 2 && c == 1);
+                    int col = center ? 0xFFFFD045 : (rfPort ? 0xFFD92228 : 0xFF345678);
+                    drawRect(cx + 1, cy + 1, cx + cell - 1, cy + cell - 1, col);
+                    if (inBox(mouseX, mouseY, cx, cy, cell, cell)) {
+                        if (center) {
+                            this.hoveredCustomTooltip = "\u00a7eExtrator de Petr\u00f3leo (centro)";
+                        } else if (rfPort) {
+                            this.hoveredCustomTooltip = "\u00a7cEntrada de Energia RF (qualquer lado cardeal)";
+                        } else {
+                            this.hoveredCustomTooltip = "\u00a77Bloco Blindado (7x no 3x3)";
+                        }
+                    }
+                }
+            }
+            if (page.result != null) {
+                GuiTheme.drawSlotBox(vx + 7, topY + 8);
+                drawItemIcon(page.result, vx + 8, topY + 9, 1, mouseX, mouseY);
+            }
+            GuiTheme.drawSlotBox(vx + vw - 25, topY + 8);
+            drawItemIcon(new ItemStack(OSBlocks.blockEnergyInput), vx + vw - 24, topY + 9, 1, mouseX, mouseY);
+            return;
+        }
+
         if (page.multiblockId == ManualData.MB_PLATFORM_7X7) {
             int cell = 10;
             int size = 7 * cell;
@@ -348,7 +373,6 @@ public class GuiManual extends GuiScreen {
             int baseY = topY + 66;
             drawRect(bx, baseY, bx + baseW, baseY + 6, 0xFF34739E);
             drawRect(bx + baseW / 2 - 4, baseY, bx + baseW / 2 + 4, baseY + 6, 0xFF55E0FF);
-
             int rx = vx + vw / 2 - 5;
             for (int i = 0; i < h; i++) {
                 int sy = baseY - (i + 1) * segH;
@@ -368,10 +392,8 @@ public class GuiManual extends GuiScreen {
         if (page.multiblockId == ManualData.MB_ORBIT_SAT) {
             int cx = vx + vw / 2;
             int cy = topY + 34;
-            // Asas solares giratórias
             drawRect(cx - 46, cy - 5, cx - 10, cy + 5, 0xFF1F5FA8);
             drawRect(cx + 10, cy - 5, cx + 46, cy + 5, 0xFF1F5FA8);
-            // Núcleo clicável 1x3
             for (int i = -1; i <= 1; i++) {
                 drawRect(cx - 6, cy - 6 + i * 11, cx + 6, cy + 4 + i * 11,
                     i == 0 ? 0xFFFFCC44 : 0xFF9EB4CC);
@@ -415,7 +437,6 @@ public class GuiManual extends GuiScreen {
         }
         ItemStack renderStack = stack.copy();
         renderStack.stackSize = Math.max(1, count);
-
         GL11.glPushMatrix();
         RenderHelper.enableGUIStandardItemLighting();
         GL11.glEnable(GL11.GL_DEPTH_TEST);
@@ -452,7 +473,6 @@ public class GuiManual extends GuiScreen {
         int x0 = this.guiLeft;
         int y0 = this.guiTop;
 
-        // Clique nas 3 abas
         int tabX = x0 + 8;
         int tabY = y0 + 23;
         int tabW = 87;
@@ -464,7 +484,6 @@ public class GuiManual extends GuiScreen {
             }
         }
 
-        // Clique no índice lateral
         int sideX = x0 + 8;
         int sideY = y0 + 42;
         int sideW = 96;
@@ -472,7 +491,6 @@ public class GuiManual extends GuiScreen {
         int total = this.sectionPages.size();
         int maxScroll = Math.max(0, total - LIST_ROWS);
         int sbX = sideX + sideW - 10;
-
         if (inBox(mouseX, mouseY, sbX, sideY + 4, 8, 12)) {
             if (this.listScroll > 0) {
                 this.listScroll--;
@@ -497,7 +515,6 @@ public class GuiManual extends GuiScreen {
             }
         }
 
-        // Botões Anterior / Próxima
         int footY = y0 + GUI_H - 22;
         if (this.pageIndex > 0 && inBox(mouseX, mouseY, x0 + 8, footY, 64, 15)) {
             this.selectPage(this.pageIndex - 1);

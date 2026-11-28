@@ -122,6 +122,7 @@ public final class OSTextureGenerator {
         // ------------------------------------------------------------------
         putPng(out, "textures/environment/earth.png", makeEarthTexture(1024, 512));
         putPng(out, "textures/environment/earth_clouds.png", makeEarthCloudsTexture(1024, 512));
+		OSPumpAndSuitTextures.populate(out);
     }
 
     private static void putPng(Map<String, byte[]> out, String relPath, BufferedImage img) {

@@ -52,12 +52,17 @@ public class CraftingStationRecipes {
 
     public static void init() {
         // ------------------------------------------------------------------
-        // MATERIAIS
+        // MATERIAIS & COMPONENTES
         // ------------------------------------------------------------------
         addShaped(2, 2, new Object[]{
             new ItemStack(Items.coal), new ItemStack(Items.coal),
             new ItemStack(Blocks.glass_pane), new ItemStack(Blocks.glass_pane)
         }, new ItemStack(OSItems.carbonFiber, 2), TIME_SMALL);
+
+        addShaped(2, 2, new Object[]{
+            "itemSilicon", new ItemStack(Blocks.glass),
+            new ItemStack(Blocks.glass), "itemSilicon"
+        }, new ItemStack(OSItems.itemGlassFiber, 2), TIME_SMALL);
 
         addShaped(2, 2, new Object[]{
             new ItemStack(Items.iron_ingot), new ItemStack(Items.iron_ingot),
@@ -86,7 +91,96 @@ public class CraftingStationRecipes {
             null, new ItemStack(OSItems.ingotSteel), null
         }, new ItemStack(OSItems.itemControlModule, 1), TIME_MEDIUM);
 
-        // Antenas T1-T5
+        addShaped(3, 3, new Object[]{
+            null, new ItemStack(OSItems.itemCircuit), null,
+            "itemSilicon", new ItemStack(Items.redstone), "itemSilicon",
+            "ingotSteel", "ingotSteel", "ingotSteel"
+        }, new ItemStack(OSItems.itemOilSensor, 1), TIME_SMALL);
+
+        // Tanque de Oxigênio (EVA)
+        addShaped(3, 3, new Object[]{
+            null, "ingotSteel", null,
+            "ingotAluminiumAlloy", new ItemStack(OSItems.itemGlassFiber), "ingotAluminiumAlloy",
+            null, "ingotSteel", null
+        }, new ItemStack(OSItems.itemOxygenTank, 1), TIME_MEDIUM);
+
+        // Propulsores a Gás (EVA)
+        addShaped(3, 3, new Object[]{
+            "ingotTitaniumAlloy", new ItemStack(OSItems.itemCircuit), "ingotTitaniumAlloy",
+            "ingotAluminiumAlloy", new ItemStack(OSItems.ingotRedmeg), "ingotAluminiumAlloy",
+            new ItemStack(OSItems.carbonFiber), null, new ItemStack(OSItems.carbonFiber)
+        }, new ItemStack(OSItems.itemGasThrusters, 1), TIME_MEDIUM);
+
+        // Kevlar Vidro-Fibroso (TODOS os 15 slots da 3x5 -> 1x)
+        addShaped(5, 3, new Object[]{
+            new ItemStack(OSItems.itemKevlar), new ItemStack(OSItems.itemGlassFiber), new ItemStack(OSItems.carbonFiber), new ItemStack(OSItems.itemGlassFiber), new ItemStack(OSItems.itemKevlar),
+            new ItemStack(OSItems.itemGlassFiber), new ItemStack(OSItems.itemKevlar), new ItemStack(OSItems.itemKevlar), new ItemStack(OSItems.itemKevlar), new ItemStack(OSItems.itemGlassFiber),
+            new ItemStack(OSItems.itemKevlar), new ItemStack(OSItems.carbonFiber), new ItemStack(OSItems.itemGlassFiber), new ItemStack(OSItems.carbonFiber), new ItemStack(OSItems.itemKevlar)
+        }, new ItemStack(OSItems.itemKevlarFiberglass, 1), TIME_MEDIUM);
+
+        // ------------------------------------------------------------------
+        // TRAJE ESPACIAL EVA (24 Kevlar Vidro-Fibroso no total)
+        // ------------------------------------------------------------------
+        // Capacete Espacial (5 KVF)
+        addShaped(3, 2, new Object[]{
+            new ItemStack(OSItems.itemKevlarFiberglass), new ItemStack(OSItems.itemKevlarFiberglass), new ItemStack(OSItems.itemKevlarFiberglass),
+            new ItemStack(OSItems.itemKevlarFiberglass), null, new ItemStack(OSItems.itemKevlarFiberglass)
+        }, new ItemStack(OSItems.spaceHelmet, 1), TIME_MEDIUM);
+
+        // Torso Espacial (8 KVF + 1 Tanque de Oxigênio)
+        addShaped(3, 3, new Object[]{
+            new ItemStack(OSItems.itemKevlarFiberglass), new ItemStack(OSItems.itemOxygenTank), new ItemStack(OSItems.itemKevlarFiberglass),
+            new ItemStack(OSItems.itemKevlarFiberglass), new ItemStack(OSItems.itemKevlarFiberglass), new ItemStack(OSItems.itemKevlarFiberglass),
+            new ItemStack(OSItems.itemKevlarFiberglass), new ItemStack(OSItems.itemKevlarFiberglass), new ItemStack(OSItems.itemKevlarFiberglass)
+        }, new ItemStack(OSItems.spaceChestplate, 1), TIME_LARGE);
+
+        // Calça Espacial (7 KVF)
+        addShaped(3, 3, new Object[]{
+            new ItemStack(OSItems.itemKevlarFiberglass), new ItemStack(OSItems.itemKevlarFiberglass), new ItemStack(OSItems.itemKevlarFiberglass),
+            new ItemStack(OSItems.itemKevlarFiberglass), null, new ItemStack(OSItems.itemKevlarFiberglass),
+            new ItemStack(OSItems.itemKevlarFiberglass), null, new ItemStack(OSItems.itemKevlarFiberglass)
+        }, new ItemStack(OSItems.spaceLeggings, 1), TIME_MEDIUM);
+
+        // Botas Espaciais (4 KVF + 1 Propulsores a Gás)
+        addShaped(3, 2, new Object[]{
+            new ItemStack(OSItems.itemKevlarFiberglass), null, new ItemStack(OSItems.itemKevlarFiberglass),
+            new ItemStack(OSItems.itemKevlarFiberglass), new ItemStack(OSItems.itemGasThrusters), new ItemStack(OSItems.itemKevlarFiberglass)
+        }, new ItemStack(OSItems.spaceBoots, 1), TIME_MEDIUM);
+
+        // ------------------------------------------------------------------
+        // MÁQUINAS PETROQUÍMICAS & RF
+        // ------------------------------------------------------------------
+        // Entrada de Energia RF
+        addShaped(3, 3, new Object[]{
+            "ingotSteel", new ItemStack(Items.redstone), "ingotSteel",
+            "ingotCopper", new ItemStack(OSItems.itemCircuit), "ingotCopper",
+            "ingotSteel", new ItemStack(Items.redstone), "ingotSteel"
+        }, new ItemStack(OSBlocks.blockEnergyInput, 1), TIME_SMALL);
+
+        // Extrator de Petróleo (3x5)
+        addShaped(5, 3, new Object[]{
+            "ingotSteel", "ingotAluminiumAlloy", new ItemStack(OSItems.itemCircuit), "ingotAluminiumAlloy", "ingotSteel",
+            new ItemStack(OSBlocks.blockCladded), "ingotSteel", new ItemStack(OSItems.itemControlModule), "ingotSteel", new ItemStack(OSBlocks.blockCladded),
+            "ingotTitaniumAlloy", new ItemStack(OSBlocks.blockCladded), new ItemStack(OSBlocks.blockEnergyInput), new ItemStack(OSBlocks.blockCladded), "ingotTitaniumAlloy"
+        }, new ItemStack(OSBlocks.blockOilExtractor, 1), TIME_LARGE);
+
+        // Refinador de Petróleo (3x5)
+        addShaped(5, 3, new Object[]{
+            "ingotSteel", new ItemStack(Blocks.glass), new ItemStack(OSItems.itemCircuit), new ItemStack(Blocks.glass), "ingotSteel",
+            "ingotAluminiumAlloy", new ItemStack(Items.bucket), new ItemStack(OSItems.itemControlModule), new ItemStack(Items.bucket), "ingotAluminiumAlloy",
+            "ingotTitaniumAlloy", "ingotSteel", new ItemStack(OSBlocks.blockEnergyInput), "ingotSteel", "ingotTitaniumAlloy"
+        }, new ItemStack(OSBlocks.blockOilRefiner, 1), TIME_LARGE);
+
+        // Máquina Sintetizadora (3x5)
+        addShaped(5, 3, new Object[]{
+            "ingotTitaniumAlloy", new ItemStack(OSItems.ingotYellomite), new ItemStack(OSItems.itemControlModule), new ItemStack(OSItems.ingotYellomite), "ingotTitaniumAlloy",
+            new ItemStack(OSItems.ingotRedmeg), new ItemStack(OSItems.itemCircuit), new ItemStack(OSItems.itemGlassFiber), new ItemStack(OSItems.itemCircuit), new ItemStack(OSItems.ingotRedmeg),
+            new ItemStack(OSBlocks.blockCladded), "ingotSteel", new ItemStack(OSBlocks.blockEnergyInput), "ingotSteel", new ItemStack(OSBlocks.blockCladded)
+        }, new ItemStack(OSBlocks.blockSynthesizer, 1), TIME_LARGE);
+
+        // ------------------------------------------------------------------
+        // ANTENAS T1-T5, PAINÉIS, BLOCOS & MÓDULOS
+        // ------------------------------------------------------------------
         addShaped(3, 3, new Object[]{
             null, new ItemStack(OSItems.itemCircuit), null,
             null, "ingotCopper", null,
@@ -94,91 +188,81 @@ public class CraftingStationRecipes {
         }, new ItemStack(OSItems.itemAntennaT1, 1), TIME_MEDIUM);
 
         addShaped(3, 3, new Object[]{
-            null, new ItemStack(OSItems.ingotRedmeg), null,
-            "ingotTitaniumAlloy", antStack(1), "ingotTitaniumAlloy",
-            null, new ItemStack(OSItems.ingotRedmeg), null
+            null, antStack(1), null,
+            "ingotAluminiumAlloy", new ItemStack(OSItems.itemCircuit), "ingotAluminiumAlloy",
+            null, "ingotSteel", null
         }, new ItemStack(OSItems.itemAntennaT2, 1), TIME_MEDIUM);
 
         addShaped(3, 3, new Object[]{
-            null, new ItemStack(OSItems.ingotRedmeg), null,
-            "ingotTitaniumAlloy", antStack(2), "ingotTitaniumAlloy",
-            null, new ItemStack(OSItems.ingotRedmeg), null
+            null, antStack(2), null,
+            "ingotTitaniumAlloy", new ItemStack(OSItems.itemControlModule), "ingotTitaniumAlloy",
+            null, "ingotSteel", null
         }, new ItemStack(OSItems.itemAntennaT3, 1), TIME_MEDIUM);
 
         addShaped(3, 3, new Object[]{
-            null, new ItemStack(OSItems.ingotRedmeg), null,
-            "ingotTitaniumAlloy", antStack(3), "ingotTitaniumAlloy",
-            null, new ItemStack(OSItems.ingotRedmeg), null
+            null, antStack(3), null,
+            new ItemStack(OSItems.ingotYellomite), new ItemStack(OSItems.itemControlModule), new ItemStack(OSItems.ingotYellomite),
+            null, "ingotTitaniumAlloy", null
         }, new ItemStack(OSItems.itemAntennaT4, 1), TIME_MEDIUM);
 
         addShaped(3, 3, new Object[]{
-            null, new ItemStack(OSItems.ingotYellomite), null,
-            "ingotTitaniumAlloy", antStack(4), "ingotTitaniumAlloy",
-            null, new ItemStack(OSItems.ingotYellomite), null
+            null, antStack(4), null,
+            new ItemStack(OSItems.ingotRedmeg), new ItemStack(OSItems.itemControlModule), new ItemStack(OSItems.ingotRedmeg),
+            "ingotTitaniumAlloy", new ItemStack(OSItems.ingotYellomite), "ingotTitaniumAlloy"
         }, new ItemStack(OSItems.itemAntennaT5, 1), TIME_MEDIUM);
 
+        // Painel Solar T1
         addShaped(3, 3, new Object[]{
-            new ItemStack(Blocks.glass_pane), new ItemStack(Blocks.glass_pane), new ItemStack(Blocks.glass_pane),
-            "itemSilicon", new ItemStack(OSItems.ingotYellomite), "itemSilicon",
-            "ingotSteel", "ingotTitanium", new ItemStack(OSItems.itemCircuit)
-        }, new ItemStack(OSItems.itemSolarPanelT1, 2), TIME_MEDIUM);
+            "itemSilicon", "itemSilicon", "itemSilicon",
+            new ItemStack(Blocks.glass), "ingotCopper", new ItemStack(Blocks.glass),
+            "ingotSteel", new ItemStack(OSItems.itemCircuit), "ingotSteel"
+        }, new ItemStack(OSItems.itemSolarPanelT1, 1), TIME_MEDIUM);
 
-        // ------------------------------------------------------------------
-        // BLOCOS E REPARO
-        // ------------------------------------------------------------------
+        // Bloco Blindado (4x)
         addShaped(3, 3, new Object[]{
+            "ingotSteel", "ingotAluminiumAlloy", "ingotSteel",
             "ingotAluminiumAlloy", new ItemStack(OSItems.carbonFiber), "ingotAluminiumAlloy",
-            new ItemStack(OSItems.carbonFiber), "ingotTitaniumAlloy", new ItemStack(OSItems.carbonFiber),
-            "ingotAluminiumAlloy", new ItemStack(OSItems.carbonFiber), "ingotAluminiumAlloy"
+            "ingotSteel", "ingotAluminiumAlloy", "ingotSteel"
         }, new ItemStack(OSBlocks.blockCladded, 4), TIME_SMALL);
 
+        // Plataforma de Lançamento (4x)
         addShaped(3, 3, new Object[]{
-            new ItemStack(OSItems.itemCircuit), new ItemStack(OSItems.ingotSteel), new ItemStack(OSItems.itemCircuit),
-            new ItemStack(OSItems.ingotSteel), new ItemStack(OSItems.itemControlModule), new ItemStack(OSItems.ingotSteel),
-            new ItemStack(OSItems.itemCircuit), new ItemStack(OSItems.ingotSteel), new ItemStack(OSItems.itemCircuit)
+            "ingotSteel", "ingotSteel", "ingotSteel",
+            new ItemStack(OSBlocks.blockCladded), new ItemStack(OSItems.itemCircuit), new ItemStack(OSBlocks.blockCladded),
+            "ingotTitaniumAlloy", "ingotTitaniumAlloy", "ingotTitaniumAlloy"
+        }, new ItemStack(OSBlocks.blockLaunchPlatform, 4), TIME_SMALL);
+
+        // Computador de Bordo
+        addShaped(3, 3, new Object[]{
+            "ingotSteel", new ItemStack(Blocks.glass_pane), "ingotSteel",
+            new ItemStack(OSItems.itemCircuit), new ItemStack(OSItems.itemControlModule), new ItemStack(OSItems.itemCircuit),
+            "ingotSteel", "ingotCopper", "ingotSteel"
         }, new ItemStack(OSBlocks.blockComputer, 1), TIME_MEDIUM);
 
-        addShaped(3, 3, new Object[]{
-            "ingotSteel", new ItemStack(OSBlocks.blockCladded), "ingotSteel",
-            new ItemStack(OSBlocks.blockCladded), new ItemStack(OSItems.itemControlModule), new ItemStack(OSBlocks.blockCladded),
-            "ingotSteel", new ItemStack(OSBlocks.blockCladded), "ingotSteel"
-        }, new ItemStack(OSBlocks.blockLaunchPlatform, 9), TIME_MEDIUM);
-
-        // Kit de Reparo (2x)
+        // Módulos de Escudo T1-T3
         addShaped(3, 3, new Object[]{
             "ingotSteel", "ingotTitaniumAlloy", "ingotSteel",
             "ingotTitaniumAlloy", new ItemStack(OSItems.itemCircuit), "ingotTitaniumAlloy",
-            "ingotSteel", new ItemStack(Items.redstone), "ingotSteel"
-        }, new ItemStack(OSItems.itemRepairKit, 2), TIME_SMALL);
-
-        // ------------------------------------------------------------------
-        // MÓDULOS DE ESCUDO CONTRA DETRITOS (T1, T2, T3)
-        // ------------------------------------------------------------------
-        addShaped(3, 3, new Object[]{
-            "ingotTitaniumAlloy", new ItemStack(OSItems.carbonFiber), "ingotTitaniumAlloy",
-            new ItemStack(OSItems.carbonFiber), new ItemStack(OSItems.itemCircuit), new ItemStack(OSItems.carbonFiber),
-            "ingotTitaniumAlloy", new ItemStack(OSItems.carbonFiber), "ingotTitaniumAlloy"
+            "ingotSteel", new ItemStack(OSItems.carbonFiber), "ingotSteel"
         }, new ItemStack(OSItems.itemModuleDebrisShield, 1), TIME_MEDIUM);
 
         addShaped(3, 3, new Object[]{
-            new ItemStack(OSItems.ingotYellomite), new ItemStack(OSItems.itemModuleDebrisShield), new ItemStack(OSItems.ingotYellomite),
-            "ingotTitaniumAlloy", new ItemStack(OSItems.itemCircuit), "ingotTitaniumAlloy",
-            new ItemStack(OSItems.ingotYellomite), new ItemStack(OSItems.carbonFiber), new ItemStack(OSItems.ingotYellomite)
+            "ingotAluminiumAlloy", new ItemStack(OSItems.itemModuleDebrisShield), "ingotAluminiumAlloy",
+            "ingotTitaniumAlloy", new ItemStack(OSItems.itemControlModule), "ingotTitaniumAlloy",
+            "ingotSteel", new ItemStack(OSItems.ingotYellomite), "ingotSteel"
         }, new ItemStack(OSItems.itemModuleDebrisShieldT2, 1), TIME_MEDIUM);
 
         addShaped(3, 3, new Object[]{
             new ItemStack(OSItems.ingotRedmeg), new ItemStack(OSItems.itemModuleDebrisShieldT2), new ItemStack(OSItems.ingotRedmeg),
             "ingotTitaniumAlloy", new ItemStack(OSItems.itemControlModule), "ingotTitaniumAlloy",
-            new ItemStack(OSItems.ingotRedmeg), new ItemStack(OSItems.ingotYellomite), new ItemStack(OSItems.ingotRedmeg)
+            new ItemStack(OSItems.ingotYellomite), new ItemStack(OSBlocks.blockCladded), new ItemStack(OSItems.ingotYellomite)
         }, new ItemStack(OSItems.itemModuleDebrisShieldT3, 1), TIME_MEDIUM);
 
-        // ------------------------------------------------------------------
-        // MÓDULOS DE EFICIÊNCIA ENERGÉTICA (T1 +8%, T2 +12%, T3 +18%)
-        // ------------------------------------------------------------------
+        // Módulos de Eficiência T1-T3
         addShaped(3, 3, new Object[]{
-            "itemSilicon", new ItemStack(OSItems.ingotYellomite), "itemSilicon",
-            new ItemStack(OSItems.itemCircuit), new ItemStack(OSItems.itemSolarPanelT1), new ItemStack(OSItems.itemCircuit),
-            "ingotAluminiumAlloy", new ItemStack(OSItems.itemCircuit), "ingotAluminiumAlloy"
+            new ItemStack(OSItems.itemSolarPanelT1), new ItemStack(OSItems.ingotYellomite), new ItemStack(OSItems.itemSolarPanelT1),
+            "ingotAluminiumAlloy", new ItemStack(OSItems.itemCircuit), "ingotAluminiumAlloy",
+            "ingotSteel", new ItemStack(OSItems.ingotRedmeg), "ingotSteel"
         }, new ItemStack(OSItems.itemModuleEfficiencyT1, 1), TIME_MEDIUM);
 
         addShaped(3, 3, new Object[]{
@@ -196,28 +280,24 @@ public class CraftingStationRecipes {
         // ------------------------------------------------------------------
         // FOGUETES & ESTAÇÃO DE CONTROLE (3x5)
         // ------------------------------------------------------------------
-        // Foguete Tier 1
         addShaped(5, 3, new Object[]{
             new ItemStack(OSItems.itemAntennaT1), new ItemStack(OSItems.itemSolarPanelT1), new ItemStack(OSItems.itemSolarPanelT1), new ItemStack(OSItems.itemSolarPanelT1), new ItemStack(OSItems.itemAntennaT1),
             new ItemStack(OSBlocks.blockCladded), new ItemStack(OSBlocks.blockCladded), new ItemStack(OSBlocks.blockCladded), new ItemStack(OSBlocks.blockCladded), new ItemStack(OSBlocks.blockCladded),
             "ingotTitaniumAlloy", "ingotTitaniumAlloy", new ItemStack(OSItems.itemControlModule), "ingotTitaniumAlloy", "ingotTitaniumAlloy"
         }, new ItemStack(OSItems.itemRocketT1, 1), TIME_LARGE);
 
-        // Foguete de Navegação
         addShaped(3, 3, new Object[]{
             new ItemStack(OSItems.itemSolarPanelT1), new ItemStack(OSItems.itemAntennaT1), new ItemStack(OSItems.itemSolarPanelT1),
             new ItemStack(OSBlocks.blockCladded), new ItemStack(OSItems.itemControlModule), new ItemStack(OSBlocks.blockCladded),
             "ingotTitaniumAlloy", "ingotTitaniumAlloy", "ingotTitaniumAlloy"
         }, new ItemStack(OSItems.itemNavRocket, 1), TIME_LARGE);
 
-        // Foguete Dispersor de Meteoros (interceptador estratosférico 3x5)
         addShaped(5, 3, new Object[]{
             new ItemStack(OSItems.ingotRedmeg), new ItemStack(Items.gunpowder), new ItemStack(OSItems.itemCircuit), new ItemStack(Items.gunpowder), new ItemStack(OSItems.ingotRedmeg),
             new ItemStack(OSBlocks.blockCladded), new ItemStack(OSBlocks.blockCladded), new ItemStack(OSItems.itemControlModule), new ItemStack(OSBlocks.blockCladded), new ItemStack(OSBlocks.blockCladded),
             "ingotTitaniumAlloy", new ItemStack(OSItems.carbonFiber), new ItemStack(OSItems.itemAntennaT1), new ItemStack(OSItems.carbonFiber), "ingotTitaniumAlloy"
         }, new ItemStack(OSItems.itemDispersionRocket, 1), TIME_MEDIUM);
 
-        // Estação de Controle Orbital (Multiblock 15x11x13 — crafting avançado 3x5)
         addShaped(5, 3, new Object[]{
             antStack(2), new ItemStack(OSItems.ingotYellomite), new ItemStack(OSBlocks.blockComputer), new ItemStack(OSItems.ingotYellomite), antStack(2),
             new ItemStack(OSBlocks.blockCladded), new ItemStack(OSItems.itemSolarPanelT1), new ItemStack(OSItems.itemControlModule), new ItemStack(OSItems.itemSolarPanelT1), new ItemStack(OSBlocks.blockCladded),

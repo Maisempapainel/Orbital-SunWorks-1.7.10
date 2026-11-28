@@ -1,5 +1,6 @@
 package com.orbitalsunworks.client.gui;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import net.minecraft.client.gui.GuiButton;
@@ -11,6 +12,7 @@ import com.orbitalsunworks.OrbitalSunworks;
 import com.orbitalsunworks.client.handler.ClientMeteorHandler;
 import com.orbitalsunworks.network.MessageControlDataRequest;
 import com.orbitalsunworks.network.MessageControlDataResponse;
+import com.orbitalsunworks.network.MessageControlDataResponse.SatInfo;
 import com.orbitalsunworks.util.OSUtils;
 
 import cpw.mods.fml.relauncher.Side;
@@ -33,6 +35,17 @@ public class GuiControlRoom extends GuiScreen {
         this.bx = x;
         this.by = y;
         this.bz = z;
+    }
+
+    public static void updateClientData(long totalRFt, long storedRF, long maxRF, List<SatInfo> sats) {
+        MessageControlDataResponse.clientTotalRFt = totalRFt;
+        MessageControlDataResponse.clientStoredRF = storedRF;
+        MessageControlDataResponse.clientMaxRF = maxRF;
+        MessageControlDataResponse.clientAntennaStored = storedRF;
+        MessageControlDataResponse.clientAntennaMax = maxRF;
+        if (sats != null) {
+            MessageControlDataResponse.clientSatellites = new ArrayList<SatInfo>(sats);
+        }
     }
 
     @Override
@@ -87,7 +100,6 @@ public class GuiControlRoom extends GuiScreen {
         int left = (this.width - gw) / 2;
         int top = (this.height - gh) / 2;
 
-        // Painel principal high-tech
         drawRect(left - 2, top - 2, left + gw + 2, top + gh + 2, 0xFF1F6E96);
         drawRect(left, top, left + gw, top + gh, 0xF00B111B);
         drawRect(left, top, left + gw, top + 22, 0xFF111C2C);
@@ -100,7 +112,6 @@ public class GuiControlRoom extends GuiScreen {
         this.fontRendererObj.drawString(
             antTierStr, left + gw - this.fontRendererObj.getStringWidth(antTierStr) - 10, top + 7, 0x70E6FF);
 
-        // Card de energia recebida e armazenamento da torre
         int cardY = top + 28;
         drawRect(left + 10, cardY, left + gw - 10, cardY + 40, 0xFF101928);
         this.fontRendererObj.drawString(
@@ -121,7 +132,6 @@ public class GuiControlRoom extends GuiScreen {
         drawRect(barX, barY, barX + barW, barY + 6, 0xFF1B2738);
         drawRect(barX, barY, barX + (int) (barW * fill), barY + 6, 0xFF26D4FF);
 
-        // Alerta de chuva de meteoros se ativo
         int listY = cardY + 46;
         if (ClientMeteorHandler.active) {
             drawRect(left + 10, listY, left + gw - 10, listY + 18, 0xFF3A1216);
@@ -133,8 +143,7 @@ public class GuiControlRoom extends GuiScreen {
             listY += 22;
         }
 
-        // Lista de satélites em órbita
-        List<MessageControlDataResponse.SatInfo> sats = MessageControlDataResponse.clientSatellites;
+        List<SatInfo> sats = MessageControlDataResponse.clientSatellites;
         this.fontRendererObj.drawString(
             "SAT\u00c9LITES ATIVOS (" + sats.size() + ")", left + 12, listY, 0x8DB2D0);
         listY += 12;
@@ -146,7 +155,7 @@ public class GuiControlRoom extends GuiScreen {
         } else {
             int maxRows = ClientMeteorHandler.active ? 4 : 5;
             for (int i = 0; i < maxRows && (i + this.scrollOffset) < sats.size(); i++) {
-                MessageControlDataResponse.SatInfo s = sats.get(i + this.scrollOffset);
+                SatInfo s = sats.get(i + this.scrollOffset);
                 int ry = listY + i * 21;
                 boolean threat = s.targeted || ClientMeteorHandler.isTargetString(s.id);
                 drawRect(left + 10, ry, left + gw - 10, ry + 19, threat ? 0xFF2D161E : 0xFF121C2A);

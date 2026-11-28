@@ -10,12 +10,21 @@ import com.orbitalsunworks.client.gui.GuiDispersionRocket;
 import com.orbitalsunworks.client.gui.GuiManual;
 import com.orbitalsunworks.client.gui.GuiNavRocket;
 import com.orbitalsunworks.client.gui.GuiNavSelect;
+import com.orbitalsunworks.client.gui.GuiOilExtractor;
+import com.orbitalsunworks.client.gui.GuiOilRefiner;
 import com.orbitalsunworks.client.gui.GuiOrbitSatellite;
 import com.orbitalsunworks.client.gui.GuiReturnHome;
 import com.orbitalsunworks.client.gui.GuiRocket;
+import com.orbitalsunworks.client.gui.GuiSynthesizer;
 import com.orbitalsunworks.client.gui.GuiTelescope;
 import com.orbitalsunworks.craftingstation.ContainerCraftingStation;
 import com.orbitalsunworks.craftingstation.TileCraftingStation;
+import com.orbitalsunworks.machine.ContainerOilExtractor;
+import com.orbitalsunworks.machine.ContainerOilRefiner;
+import com.orbitalsunworks.machine.ContainerSynthesizer;
+import com.orbitalsunworks.machine.TileOilExtractor;
+import com.orbitalsunworks.machine.TileOilRefiner;
+import com.orbitalsunworks.machine.TileSynthesizer;
 import com.orbitalsunworks.rocket.ContainerDispersionRocket;
 import com.orbitalsunworks.rocket.ContainerNavRocket;
 import com.orbitalsunworks.rocket.ContainerReturnHome;
@@ -40,6 +49,9 @@ public class GuiHandler implements IGuiHandler {
     public static final int ID_DISPERSION_ROCKET = 8;
     public static final int ID_CONTROL_ROOM = 9;
     public static final int ID_TELESCOPE = 10;
+    public static final int ID_OIL_EXTRACTOR = 11;
+    public static final int ID_OIL_REFINER = 12;
+    public static final int ID_SYNTHESIZER = 13;
 
     @Override
     public Object getServerGuiElement(int id, EntityPlayer player, World world, int x, int y, int z) {
@@ -78,6 +90,21 @@ public class GuiHandler implements IGuiHandler {
             case ID_DISPERSION_ROCKET:
                 if (te instanceof TileDispersionRocket) {
                     return new ContainerDispersionRocket(player.inventory, (TileDispersionRocket) te);
+                }
+                return null;
+            case ID_OIL_EXTRACTOR:
+                if (te instanceof TileOilExtractor) {
+                    return new ContainerOilExtractor(player.inventory, (TileOilExtractor) te);
+                }
+                return null;
+            case ID_OIL_REFINER:
+                if (te instanceof TileOilRefiner) {
+                    return new ContainerOilRefiner(player.inventory, (TileOilRefiner) te);
+                }
+                return null;
+            case ID_SYNTHESIZER:
+                if (te instanceof TileSynthesizer) {
+                    return new ContainerSynthesizer(player.inventory, (TileSynthesizer) te);
                 }
                 return null;
             default:
@@ -127,6 +154,21 @@ public class GuiHandler implements IGuiHandler {
                 return new GuiControlRoom(x, y, z);
             case ID_TELESCOPE:
                 return new GuiTelescope(x, y, z);
+            case ID_OIL_EXTRACTOR:
+                if (te instanceof TileOilExtractor) {
+                    return new GuiOilExtractor(player.inventory, (TileOilExtractor) te);
+                }
+                return null;
+            case ID_OIL_REFINER:
+                if (te instanceof TileOilRefiner) {
+                    return new GuiOilRefiner(player.inventory, (TileOilRefiner) te);
+                }
+                return null;
+            case ID_SYNTHESIZER:
+                if (te instanceof TileSynthesizer) {
+                    return new GuiSynthesizer(player.inventory, (TileSynthesizer) te);
+                }
+                return null;
             default:
                 return null;
         }
