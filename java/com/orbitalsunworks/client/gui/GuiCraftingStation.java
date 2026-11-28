@@ -33,10 +33,11 @@ public class GuiCraftingStation extends GuiContainer {
 
     @Override
     protected void drawGuiContainerForegroundLayer(int mouseX, int mouseY) {
-        String title = StatCollector.translateToLocal("gui.orbitalsunworks.craftingStation");
-        while (this.fontRendererObj.getStringWidth(title) > 134 && title.length() > 6) {
-            title = title.substring(0, title.length() - 2) + "...";
+        if (this.tile == null) {
+            return;
         }
+        String title = GuiTheme.truncate(this.fontRendererObj,
+            StatCollector.translateToLocal("gui.orbitalsunworks.craftingStation"), 134);
         this.fontRendererObj.drawStringWithShadow(title, 8, 4, GuiTheme.TEXT_TITLE);
 
         // Tag 3x5 discreta no cabeçalho à direita
@@ -75,16 +76,17 @@ public class GuiCraftingStation extends GuiContainer {
             StatCollector.translateToLocal("container.inventory"), 8, 97, GuiTheme.TEXT_TITLE);
 
         // Dica no rodapé abaixo da hotbar
-        String hint = StatCollector.translateToLocal("manual.os.station.note.short");
-        while (this.fontRendererObj.getStringWidth(hint) > 160 && hint.length() > 6) {
-            hint = hint.substring(0, hint.length() - 2) + "...";
-        }
+        String hint = GuiTheme.truncate(this.fontRendererObj,
+            StatCollector.translateToLocal("manual.os.station.note.short"), 160);
         this.fontRendererObj.drawString(hint,
             (this.xSize - this.fontRendererObj.getStringWidth(hint)) / 2, 188, GuiTheme.TEXT_MUTED);
     }
 
     @Override
     protected void drawGuiContainerBackgroundLayer(float partialTicks, int mouseX, int mouseY) {
+        if (this.tile == null) {
+            return;
+        }
         GL11.glColor4f(1f, 1f, 1f, 1f);
         int x = (this.width - this.xSize) / 2;
         int y = (this.height - this.ySize) / 2;

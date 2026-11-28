@@ -33,6 +33,24 @@ public final class GuiTheme {
     private GuiTheme() {
     }
 
+    /**
+     * Trunca um texto com "..." garantindo que caiba em maxWidth sem jamais
+     * entrar em loop infinito ou estourar índices.
+     */
+    public static String truncate(FontRenderer fr, String text, int maxWidth) {
+        if (text == null || text.isEmpty() || fr == null || maxWidth <= 0) {
+            return "";
+        }
+        if (fr.getStringWidth(text) <= maxWidth) {
+            return text;
+        }
+        int ellW = fr.getStringWidth("...");
+        if (maxWidth <= ellW) {
+            return fr.trimStringToWidth(text, maxWidth);
+        }
+        return fr.trimStringToWidth(text, maxWidth - ellW) + "...";
+    }
+
     public static void drawAerospacePanel(int x, int y, int w, int h) {
         // Sombra / contorno externo
         Gui.drawRect(x, y, x + w, y + h, BG_OUTER);
@@ -120,16 +138,18 @@ public final class GuiTheme {
         if (enabled) {
             Gui.drawRect(x + 1, y + 1, x + w - 1, y + 2, hover ? 0x80FFFFFF : 0x40FFFFFF);
         }
-        String shown = fr.trimStringToWidth(text, Math.max(8, w - 6));
+        String safeText = text != null ? text : "";
+        String shown = fr.trimStringToWidth(safeText, Math.max(8, w - 6));
         int tx = x + (w - fr.getStringWidth(shown)) / 2;
         int ty = y + (h - 8) / 2;
         fr.drawStringWithShadow(shown, tx, ty, textCol);
     }
 
     public static void drawBadge(FontRenderer fr, int x, int y, String text, int bg, int border, int fg) {
-        int w = fr.getStringWidth(text) + 8;
+        String safeText = text != null ? text : "";
+        int w = fr.getStringWidth(safeText) + 8;
         Gui.drawRect(x, y, x + w, y + 11, border);
         Gui.drawRect(x + 1, y + 1, x + w - 1, y + 10, bg);
-        fr.drawString(text, x + 4, y + 2, fg);
+        fr.drawString(safeText, x + 4, y + 2, fg);
     }
 }

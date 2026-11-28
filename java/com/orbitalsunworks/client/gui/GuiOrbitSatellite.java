@@ -40,11 +40,11 @@ public class GuiOrbitSatellite extends GuiContainer {
 
     @Override
     protected void drawGuiContainerForegroundLayer(int mouseX, int mouseY) {
-        // Cabeçalho: Nome + Tier
-        String name = this.tile.getSatelliteName();
-        while (this.fontRendererObj.getStringWidth(name) > 125 && name.length() > 3) {
-            name = name.substring(0, name.length() - 2) + "...";
+        if (this.tile == null) {
+            return;
         }
+        // Cabeçalho: Nome + Tier
+        String name = GuiTheme.truncate(this.fontRendererObj, this.tile.getSatelliteName(), 125);
         this.fontRendererObj.drawStringWithShadow(name, 8, 5, GuiTheme.TEXT_TITLE);
 
         // Telemetria: Vida útil + Geração
@@ -87,16 +87,17 @@ public class GuiOrbitSatellite extends GuiContainer {
             StatCollector.translateToLocal("container.inventory"), 8, 106, GuiTheme.TEXT_TITLE);
 
         // Dica no rodapé
-        String hint = StatCollector.translateToLocal("gui.orbitalsunworks.sat.repair");
-        while (this.fontRendererObj.getStringWidth(hint) > 160 && hint.length() > 6) {
-            hint = hint.substring(0, hint.length() - 2) + "...";
-        }
+        String hint = GuiTheme.truncate(this.fontRendererObj,
+            StatCollector.translateToLocal("gui.orbitalsunworks.sat.repair"), 160);
         this.fontRendererObj.drawString(hint,
             (this.xSize - this.fontRendererObj.getStringWidth(hint)) / 2, 199, GuiTheme.TEXT_MUTED);
     }
 
     @Override
     protected void drawGuiContainerBackgroundLayer(float partialTicks, int mouseX, int mouseY) {
+        if (this.tile == null) {
+            return;
+        }
         GL11.glColor4f(1f, 1f, 1f, 1f);
         int x = (this.width - this.xSize) / 2;
         int y = (this.height - this.ySize) / 2;

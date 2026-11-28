@@ -2,21 +2,30 @@ package com.orbitalsunworks.block;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
+import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.IIcon;
 import net.minecraft.world.Explosion;
 import net.minecraft.world.IBlockAccess;
 import net.minecraft.world.World;
 
 import com.orbitalsunworks.OrbitalSunworks;
+import com.orbitalsunworks.Reference;
 import com.orbitalsunworks.handler.GuiHandler;
 import com.orbitalsunworks.satellite.TileOrbitSatellite;
+
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
 
 /**
  * Estrutura física central do satélite em órbita (indestrutível e iluminada).
  */
 public class BlockOrbitSatellite extends Block {
+
+    @SideOnly(Side.CLIENT)
+    private IIcon iconBase;
 
     public BlockOrbitSatellite() {
         super(Material.iron);
@@ -27,6 +36,18 @@ public class BlockOrbitSatellite extends Block {
         this.setLightLevel(0.85f);
         this.setStepSound(soundTypeMetal);
         this.setBlockBounds(0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f);
+    }
+
+    @Override
+    @SideOnly(Side.CLIENT)
+    public void registerBlockIcons(IIconRegister reg) {
+        this.iconBase = reg.registerIcon(Reference.RESOURCE_PREFIX + "blockOrbitSatellite");
+    }
+
+    @Override
+    @SideOnly(Side.CLIENT)
+    public IIcon getIcon(int side, int meta) {
+        return this.iconBase;
     }
 
     @Override

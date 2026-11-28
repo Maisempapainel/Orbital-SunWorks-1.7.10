@@ -44,6 +44,9 @@ public class GuiReturnHome extends GuiContainer {
 
     @Override
     protected void drawGuiContainerBackgroundLayer(float partialTicks, int mouseX, int mouseY) {
+        if (this.tile == null) {
+            return;
+        }
         GL11.glColor4f(1f, 1f, 1f, 1f);
         int x = (this.width - this.xSize) / 2;
         int y = (this.height - this.ySize) / 2;
@@ -71,10 +74,8 @@ public class GuiReturnHome extends GuiContainer {
         if (this.tile == null) {
             return;
         }
-        String title = StatCollector.translateToLocal("gui.orbitalsunworks.return.title");
-        while (this.fontRendererObj.getStringWidth(title) > 162 && title.length() > 6) {
-            title = title.substring(0, title.length() - 2) + "...";
-        }
+        String title = GuiTheme.truncate(this.fontRendererObj,
+            StatCollector.translateToLocal("gui.orbitalsunworks.return.title"), 162);
         this.fontRendererObj.drawStringWithShadow(title,
             (this.xSize - this.fontRendererObj.getStringWidth(title)) / 2, 6, GuiTheme.TEXT_TITLE);
 
@@ -96,7 +97,8 @@ public class GuiReturnHome extends GuiContainer {
         this.fontRendererObj.drawString(coords,
             (this.xSize - this.fontRendererObj.getStringWidth(coords)) / 2, 65, GuiTheme.TEXT_BODY);
 
-        String foot = "Retorno direto à plataforma de origem";
+        String foot = GuiTheme.truncate(this.fontRendererObj,
+            "Retorno direto \u00e0 plataforma de origem", this.xSize - 16);
         this.fontRendererObj.drawString(foot,
             (this.xSize - this.fontRendererObj.getStringWidth(foot)) / 2, 118, GuiTheme.TEXT_MUTED);
     }

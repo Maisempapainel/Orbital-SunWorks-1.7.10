@@ -88,11 +88,13 @@ public final class OrbitStructureManager {
 
         // Coluna central 1x3x1 clicável (meta 0 = âncora com TileEntity)
         orbit.setBlock(x, y, z, OSBlocks.blockOrbitSatellite, 0, 3);
-        TileEntity te = orbit.getTileEntity(x, y, z);
-        if (te instanceof TileOrbitSatellite) {
-            ((TileOrbitSatellite) te).setSatelliteId(sat.id);
-        }
         orbit.setBlock(x, y + 1, z, OSBlocks.blockOrbitSatellite, 1, 3);
         orbit.setBlock(x, y + 2, z, OSBlocks.blockOrbitSatellite, 2, 3);
+        TileEntity te = orbit.getTileEntity(x, y, z);
+        if (te instanceof TileOrbitSatellite) {
+            TileOrbitSatellite satTile = (TileOrbitSatellite) te;
+            satTile.setSatelliteId(sat.id);
+            satTile.syncToClients();
+        }
     }
 }

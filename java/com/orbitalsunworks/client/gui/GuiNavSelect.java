@@ -19,18 +19,16 @@ import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 
 /**
- * GUI de seleção de satélite (modo GuiScreen sem Container),
- * alinhada visualmente ao painel aeroespacial da GuiNavRocket.
+ * Mapa orbital standalone do Foguete de Navegação (256x218).
  */
 @SideOnly(Side.CLIENT)
 public class GuiNavSelect extends GuiScreen {
 
-    private static MessageSatelliteList lastList;
+    private static volatile MessageSatelliteList lastList;
 
-    private int scrollOffset = 0;
-    private static final int ROWS_VISIBLE = 5;
     private static final int PANEL_W = 256;
     private static final int PANEL_H = 218;
+    private static final int ROWS_VISIBLE = 5;
 
     private static final int LIST_X = 10;
     private static final int LIST_Y = 40;
@@ -50,6 +48,8 @@ public class GuiNavSelect extends GuiScreen {
     private static final int SCROLL_BTN_H = 16;
 
     private final int blockX, blockY, blockZ;
+    private int scrollOffset = 0;
+    private int requestTimer = 0;
 
     public GuiNavSelect(int x, int y, int z) {
         this.blockX = x;
@@ -71,11 +71,12 @@ public class GuiNavSelect extends GuiScreen {
     @Override
     public void updateScreen() {
         super.updateScreen();
-        if (lastList == null && this.mc.theWorld != null
-            && this.mc.theWorld.getTotalWorldTime() % 20 == 0) {
+        this.requestTimer++;
+        MessageSatelliteList list = lastList;
+        if (list == null && this.requestTimer % 20 == 0) {
             OrbitalSunworks.network.sendToServer(new MessageRequestSatellites());
         }
-        int n = lastList != null ? lastList.getCount() : 0;
+        int n = list != null ? list.getCount() : 0;
         int maxScroll = Math.max(0, n - ROWS_VISIBLE);
         if (this.scrollOffset > maxScroll) {
             this.scrollOffset = maxScroll;
@@ -86,8 +87,9 @@ public class GuiNavSelect extends GuiScreen {
     public void handleMouseInput() {
         super.handleMouseInput();
         int wheel = Mouse.getEventDWheel();
-        if (wheel != 0 && lastList != null) {
-            int maxScroll = Math.max(0, lastList.getCount() - ROWS_VISIBLE);
+        MessageSatelliteList list = lastList;
+        if (wheel != 0 && list != null) {
+            int maxScroll = Math.max(0, list.getCount() - ROWS_VISIBLE);
             if (wheel > 0 && this.scrollOffset > 0) {
                 this.scrollOffset--;
             } else if (wheel < 0 && this.scrollOffset < maxScroll) {
@@ -99,14 +101,15 @@ public class GuiNavSelect extends GuiScreen {
     @Override
     protected void mouseClicked(int mouseX, int mouseY, int button) {
         super.mouseClicked(mouseX, mouseY, button);
-        if (button != 0 || lastList == null) {
+        MessageSatelliteList list = lastList;
+        if (button != 0 || list == null) {
             return;
         }
         int x0 = (this.width - PANEL_W) / 2;
         int y0 = (this.height - PANEL_H) / 2;
         int mx = mouseX - x0;
         int my = mouseY - y0;
-        int n = lastList.getCount();
+        int n = list.getCount();
         int maxScroll = Math.max(0, n - ROWS_VISIBLE);
 
         if (mx >= SCROLL_X && mx < SCROLL_X + SCROLL_W
@@ -133,11 +136,14 @@ public class GuiNavSelect extends GuiScreen {
             if (mx >= BTN_X_REL && mx < BTN_X_REL + BTN_W && my >= by && my < by + BTN_H) {
                 int row = this.scrollOffset + i;
                 if (row >= 0 && row < n) {
-                    playClick(1.0F);
-                    UUID satId = UUID.fromString(lastList.getUuid(row));
-                    OrbitalSunworks.network.sendToServer(new MessageTravelToSatellite(
-                        satId, this.blockX, this.blockY, this.blockZ));
-                    this.mc.displayGuiScreen(null);
+                    try {
+                        UUID satId = UUID.fromString(list.getUuid(row));
+                        playClick(1.0F);
+                        OrbitalSunworks.network.sendToServer(new MessageTravelToSatellite(
+                            satId, this.blockX, this.blockY, this.blockZ));
+                        this.mc.displayGuiScreen(null);
+                    } catch (IllegalArgumentException ignored) {
+                    }
                 }
                 return;
             }
@@ -164,7 +170,8 @@ public class GuiNavSelect extends GuiScreen {
         GuiTheme.drawHeaderBar(x0 + 3, y0 + 2, PANEL_W - 6, 20);
         drawRect(x0 + LIST_X, y0 + 37, x0 + LIST_X + CARD_W, y0 + 38, GuiTheme.BORDER_SUB);
 
-        String title = StatCollector.translateToLocal("gui.orbitalsunworks.nav.title");
+        String title = GuiTheme.truncate(this.fontRendererObj,
+            StatCollector.translateToLocal("gui.orbitalsunworks.nav.title"), PANEL_W - 16);
         this.fontRendererObj.drawStringWithShadow(title,
             x0 + (PANEL_W - this.fontRendererObj.getStringWidth(title)) / 2, y0 + 8, GuiTheme.TEXT_TITLE);
 
@@ -178,12 +185,14 @@ public class GuiNavSelect extends GuiScreen {
         this.fontRendererObj.drawString(healthLbl,
             x0 + 150 - this.fontRendererObj.getStringWidth(healthLbl) / 2, y0 + 27, GuiTheme.TEXT_LABEL);
 
-        int n = lastList != null ? lastList.getCount() : 0;
+        MessageSatelliteList list = lastList;
+        int n = list != null ? list.getCount() : 0;
         String launchTxt = StatCollector.translateToLocal("gui.orbitalsunworks.launch");
 
         if (n == 0) {
             GuiTheme.drawSubPanel(x0 + LIST_X, y0 + LIST_Y, CARD_W, 138);
-            String none = StatCollector.translateToLocal("gui.orbitalsunworks.nav.none");
+            String none = GuiTheme.truncate(this.fontRendererObj,
+                StatCollector.translateToLocal("gui.orbitalsunworks.nav.none"), CARD_W - 12);
             this.fontRendererObj.drawStringWithShadow(none,
                 x0 + LIST_X + (CARD_W - this.fontRendererObj.getStringWidth(none)) / 2,
                 y0 + LIST_Y + 46, GuiTheme.TEXT_BODY);
@@ -204,17 +213,14 @@ public class GuiNavSelect extends GuiScreen {
                     drawRect(x0 + LIST_X + 1, cy + 1, x0 + LIST_X + CARD_W - 1, cy + 2, 0xFF28557A);
                 }
 
-                String name = lastList.getName(row);
-                float health = Math.max(0f, Math.min(1f, lastList.getHealth(row)));
-                int tier = lastList.getTier(row);
+                String name = list.getName(row);
+                float health = Math.max(0f, Math.min(1f, list.getHealth(row)));
+                int tier = list.getTier(row);
 
                 drawRect(x0 + LIST_X + 2, cy + 3, x0 + LIST_X + 4, cy + CARD_H - 3,
                     health > 0.4f ? 0xFF55E088 : 0xFFFF5555);
 
-                String shown = name;
-                while (this.fontRendererObj.getStringWidth(shown) > 84 && shown.length() > 3) {
-                    shown = shown.substring(0, shown.length() - 2) + "...";
-                }
+                String shown = GuiTheme.truncate(this.fontRendererObj, name, 84);
                 this.fontRendererObj.drawStringWithShadow(shown, x0 + LIST_X + 7, cy + 9, 0xFFFFFF);
 
                 GuiTheme.drawBadge(this.fontRendererObj, x0 + 104, cy + 6,
@@ -261,14 +267,12 @@ public class GuiNavSelect extends GuiScreen {
         }
 
         GuiTheme.drawSubPanel(x0 + LIST_X, y0 + 183, 236, 26);
-        String tip = StatCollector.translateToLocal("gui.orbitalsunworks.nav.footer");
         String count = n == 0 ? "0 / 0"
             : (this.scrollOffset + 1) + "-" + Math.min(this.scrollOffset + ROWS_VISIBLE, n) + " / " + n;
         int countW = this.fontRendererObj.getStringWidth(count);
-        int maxTipW = 224 - countW - 8;
-        while (this.fontRendererObj.getStringWidth(tip) > maxTipW && tip.length() > 6) {
-            tip = tip.substring(0, tip.length() - 2) + "...";
-        }
+        int maxTipW = Math.max(20, 224 - countW - 8);
+        String tip = GuiTheme.truncate(this.fontRendererObj,
+            StatCollector.translateToLocal("gui.orbitalsunworks.nav.footer"), maxTipW);
         this.fontRendererObj.drawString(tip, x0 + LIST_X + 6, y0 + 192, GuiTheme.TEXT_MUTED);
         this.fontRendererObj.drawString(count, x0 + 240 - countW, y0 + 192, GuiTheme.TEXT_TITLE);
 

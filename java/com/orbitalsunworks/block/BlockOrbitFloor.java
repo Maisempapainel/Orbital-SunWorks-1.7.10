@@ -2,6 +2,8 @@ package com.orbitalsunworks.block;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
+import net.minecraft.client.renderer.texture.IIconRegister;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.IIcon;
 import net.minecraft.world.IBlockAccess;
@@ -20,13 +22,8 @@ import cpw.mods.fml.relauncher.SideOnly;
  * void, e ele tem que continuar vendo a Terra gigantesca lá embaixo".
  *
  * Regras:
- *  - SEM textura, SEM luz, SEM partícula: getIcon null e render como
- *    ar (isOpaqueCube false + getRenderType 0 não basta — o render
- *    padrão ainda desenharia); usamos isAir-like via getIcon()==null
- *    e o RenderGlobal simplesmente não desenha blocos sem icon.
- *    Na verdade o mais seguro: sobrepor isOpaqueCube=false e o render
- *    type -1 (SEM RENDER), igual ao bloco de barreira só que sem as
- *    partículas de quebra.
+ *  - SEM textura, SEM luz, SEM partícula: registerBlockIcons vazio, getIcon null
+ *    e getRenderType() == -1 (SEM RENDER).
  *  - Colisão COMPLETA (full cube): segura o jogador na camada 30.
  *  - Indestrutível e inclicável (não aparece no creative, não quebra).
  *  - Sem drop, sem seleção (bounding box de raytrace vazia).
@@ -40,6 +37,12 @@ public class BlockOrbitFloor extends Block {
         this.setResistance(Float.MAX_VALUE);
         this.setStepSound(soundTypeMetal);
         // SEM creative tab: o jogador nunca deve pegar este bloco.
+    }
+
+    /** Evita MISSING_ICON_BLOCK no atlas do cliente. */
+    @Override
+    @SideOnly(Side.CLIENT)
+    public void registerBlockIcons(IIconRegister reg) {
     }
 
     /** NUNCA desenha nada (render type -1 = sem render, igual barrier). */

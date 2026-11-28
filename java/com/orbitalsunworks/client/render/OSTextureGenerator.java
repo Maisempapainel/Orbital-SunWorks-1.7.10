@@ -772,11 +772,11 @@ public final class OSTextureGenerator {
                 double iceThresh = 0.81 + (detail - 0.5) * 0.14;
                 int col;
                 if (absLat > iceThresh) {
-                    col = mix(0xDCEAF5, 0xF7FBFF, (float) clamp01((absLat - iceThresh) / 0.12));
+                    col = mix(0xDCEAF5, 0xF7FBFF, clamp01((float) ((absLat - iceThresh) / 0.12)));
                 } else if (elev < 0.0) {
                     // Oceanos profundos -> plataforma continental turquesa
-                    float depth = (float) clamp01(-elev / 0.24);
-                    float shelf = (float) clamp01(1.0 + elev / 0.055);
+                    float depth = clamp01((float) (-elev / 0.24));
+                    float shelf = clamp01((float) (1.0 + elev / 0.055));
                     col = mix(0x0D4B8C, 0x061E45, depth);
                     if (shelf > 0.0f) {
                         col = mix(col, 0x2088BA, shelf * 0.72f);
@@ -787,21 +787,21 @@ public final class OSTextureGenerator {
                     double aridBand = Math.exp(-Math.pow((absLat - 0.36) / 0.22, 2.0));
                     double aridity = clamp01((float) (aridBand * 0.68 + (0.55 - moisture) * 0.75));
 
-                    int lush = mix(0x1D5C2B, 0x3D803A, (float) clamp01(detail));
-                    int desert = mix(0xC29F5D, 0xDFC484, (float) clamp01(detail));
+                    int lush = mix(0x1D5C2B, 0x3D803A, clamp01((float) detail));
+                    int desert = mix(0xC29F5D, 0xDFC484, clamp01((float) detail));
                     col = mix(lush, desert, (float) aridity);
 
                     // Cadeias montanhosas e picos nevados
                     if (elev > 0.13) {
-                        float mt = (float) clamp01((elev - 0.13) / 0.14);
+                        float mt = clamp01((float) ((elev - 0.13) / 0.14));
                         col = mix(col, 0x7A7369, mt * 0.85f);
                         if (elev > 0.22) {
-                            col = mix(col, 0xEEF5FC, (float) clamp01((elev - 0.22) / 0.06));
+                            col = mix(col, 0xEEF5FC, clamp01((float) ((elev - 0.22) / 0.06)));
                         }
                     }
                     // Tundra subpolar
                     if (absLat > 0.62) {
-                        col = mix(col, 0x7D8C7E, (float) clamp01((absLat - 0.62) / 0.18));
+                        col = mix(col, 0x7D8C7E, clamp01((float) ((absLat - 0.62) / 0.18)));
                     }
                 }
                 img.setRGB(x, y, col | 0xFF000000);
