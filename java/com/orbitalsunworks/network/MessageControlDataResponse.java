@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.orbitalsunworks.client.gui.GuiControlRoom;
+import com.orbitalsunworks.satellite.TileAntennaPort;
 
 import cpw.mods.fml.common.network.ByteBufUtils;
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
@@ -16,7 +17,10 @@ public class MessageControlDataResponse implements IMessage {
     public static List<SatInfo> clientSatellites = new ArrayList<SatInfo>();
     public static long clientTotalRFt = 0L;
     public static long clientAntennaStored = 0L;
-    public static long clientAntennaMax = 0L;
+    public static long clientAntennaMax = TileAntennaPort.CAPACITY_T1;
+    public static long clientStoredRF = 0L;
+    public static long clientMaxRF = TileAntennaPort.CAPACITY_T1;
+    public static int clientAntennaTier = 1;
 
     public static class SatInfo {
         public String id = "";
@@ -25,21 +29,29 @@ public class MessageControlDataResponse implements IMessage {
         public float health = 1.0f;
         public long generationRFt = 0L;
         public boolean targeted = false;
+        public int shieldTier = 0;
+        public int efficiencyPct = 0;
         public List<String> modules = new ArrayList<String>();
     }
 
     public long totalGenerationRFt;
     public long antennaStored;
     public long antennaMax;
+    public int antennaTier = 1;
     public List<SatInfo> satellites = new ArrayList<SatInfo>();
 
     public MessageControlDataResponse() {
     }
 
     public MessageControlDataResponse(long totalGenerationRFt, long antennaStored, long antennaMax, List<SatInfo> satellites) {
+        this(totalGenerationRFt, antennaStored, antennaMax, 1, satellites);
+    }
+
+    public MessageControlDataResponse(long totalGenerationRFt, long antennaStored, long antennaMax, int antennaTier, List<SatInfo> satellites) {
         this.totalGenerationRFt = totalGenerationRFt;
         this.antennaStored = antennaStored;
         this.antennaMax = antennaMax;
+        this.antennaTier = Math.max(1, antennaTier);
         if (satellites != null) {
             this.satellites.addAll(satellites);
         }
@@ -50,6 +62,7 @@ public class MessageControlDataResponse implements IMessage {
         this.totalGenerationRFt = buf.readLong();
         this.antennaStored = buf.readLong();
         this.antennaMax = buf.readLong();
+        this.antennaTier = buf.readInt();
         int count = Math.max(0, Math.min(256, buf.readInt()));
         this.satellites.clear();
         for (int i = 0; i < count; i++) {
@@ -60,6 +73,8 @@ public class MessageControlDataResponse implements IMessage {
             s.health = buf.readFloat();
             s.generationRFt = buf.readLong();
             s.targeted = buf.readBoolean();
+            s.shieldTier = buf.readInt();
+            s.efficiencyPct = buf.readInt();
             int mCount = Math.max(0, Math.min(8, buf.readInt()));
             for (int m = 0; m < mCount; m++) {
                 s.modules.add(ByteBufUtils.readUTF8String(buf));
@@ -73,6 +88,7 @@ public class MessageControlDataResponse implements IMessage {
         buf.writeLong(this.totalGenerationRFt);
         buf.writeLong(this.antennaStored);
         buf.writeLong(this.antennaMax);
+        buf.writeInt(this.antennaTier);
         buf.writeInt(this.satellites.size());
         for (SatInfo s : this.satellites) {
             ByteBufUtils.writeUTF8String(buf, s.id != null ? s.id : "");
@@ -81,6 +97,8 @@ public class MessageControlDataResponse implements IMessage {
             buf.writeFloat(s.health);
             buf.writeLong(s.generationRFt);
             buf.writeBoolean(s.targeted);
+            buf.writeInt(s.shieldTier);
+            buf.writeInt(s.efficiencyPct);
             buf.writeInt(s.modules.size());
             for (String mod : s.modules) {
                 ByteBufUtils.writeUTF8String(buf, mod != null ? mod : "");
@@ -95,6 +113,9 @@ public class MessageControlDataResponse implements IMessage {
             clientTotalRFt = msg.totalGenerationRFt;
             clientAntennaStored = msg.antennaStored;
             clientAntennaMax = msg.antennaMax;
+            clientStoredRF = msg.antennaStored;
+            clientMaxRF = msg.antennaMax;
+            clientAntennaTier = Math.max(1, msg.antennaTier);
             clientSatellites = new ArrayList<SatInfo>(msg.satellites);
             GuiControlRoom.updateClientData(
                 msg.totalGenerationRFt,

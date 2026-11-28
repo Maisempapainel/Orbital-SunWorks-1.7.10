@@ -9,24 +9,40 @@ import net.minecraftforge.oredict.ShapelessOreRecipe;
 
 /**
  * Receitas da bancada vanilla (3x3).
- * Ligas, componentes e foguetes avançados ficam na Estação de Crafting (CraftingStationRecipes).
+ * Ligas, componentes, traje espacial e foguetes ficam na Estação de Crafting Orbital.
  */
 public class OSCrafting {
 
     public static void init() {
-        // Fibra de carbono: 2 carvão em cima + 2 vidro embaixo
+        // Fibra de carbono: 2 carvão em cima + 2 painéis de vidro embaixo
         CraftingManager.getInstance().getRecipeList().add(new ShapedOreRecipe(
             new ItemStack(OSItems.carbonFiber, 2),
             "CC", "GG",
             'C', new ItemStack(Items.coal),
             'G', new ItemStack(Blocks.glass_pane)));
 
-        // Aço: 2 ferro em cima + fibra embaixo
+        // Fibra de vidro: Silício + Vidro em 2x2
+        CraftingManager.getInstance().getRecipeList().add(new ShapedOreRecipe(
+            new ItemStack(OSItems.itemGlassFiber, 2),
+            "SG", "GS",
+            'S', "itemSilicon",
+            'G', new ItemStack(Blocks.glass)));
+
+        // Aço: 2 ferro em cima + fibra de carbono embaixo
         CraftingManager.getInstance().getRecipeList().add(new ShapedOreRecipe(
             new ItemStack(OSItems.ingotSteel, 2),
             "II", "F ",
             'I', new ItemStack(Items.iron_ingot),
             'F', new ItemStack(OSItems.carbonFiber)));
+
+        // Sensor de Petróleo: localiza jazidas de petróleo (1 em 20 chunks)
+        CraftingManager.getInstance().getRecipeList().add(new ShapedOreRecipe(
+            new ItemStack(OSItems.itemOilSensor, 1),
+            " C ", "SRS", "III",
+            'C', new ItemStack(OSItems.itemCircuit),
+            'S', "itemSilicon",
+            'R', new ItemStack(Items.redstone),
+            'I', "ingotSteel"));
 
         // Estação de Crafting Orbital: aço + circuitos + crafting table
         CraftingManager.getInstance().getRecipeList().add(new ShapedOreRecipe(

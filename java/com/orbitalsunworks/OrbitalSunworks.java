@@ -7,7 +7,9 @@ import net.minecraftforge.oredict.OreDictionary;
 
 import com.orbitalsunworks.command.CommandMeteor;
 import com.orbitalsunworks.craftingstation.CraftingStationRecipes;
+import com.orbitalsunworks.fluid.OSFluids;
 import com.orbitalsunworks.handler.GuiHandler;
+import com.orbitalsunworks.handler.SpaceSuitHandler;
 import com.orbitalsunworks.network.MessageControlDataRequest;
 import com.orbitalsunworks.network.MessageControlDataResponse;
 import com.orbitalsunworks.network.MessageDeployCinematic;
@@ -51,7 +53,10 @@ public class OrbitalSunworks {
 
     @EventHandler
     public void preInit(FMLPreInitializationEvent event) {
+        // Ordem obrigatória: Fluidos -> Itens -> Containers de balde -> Blocos
+        OSFluids.init();
         OSItems.init();
+        OSFluids.registerContainersAndEvents();
         OSBlocks.init();
 
         network = NetworkRegistry.INSTANCE.newSimpleChannel(Reference.CHANNEL);
@@ -96,6 +101,10 @@ public class OrbitalSunworks {
         MinecraftForge.EVENT_BUS.register(new com.orbitalsunworks.world.orbit.OrbitProtectionHandler());
         FMLCommonHandler.instance().bus().register(new com.orbitalsunworks.world.orbit.SatelliteCollisionPhysics());
         FMLCommonHandler.instance().bus().register(new com.orbitalsunworks.world.ControlStationBuilder.TickHandler());
+
+        SpaceSuitHandler suitHandler = new SpaceSuitHandler();
+        FMLCommonHandler.instance().bus().register(suitHandler);
+        MinecraftForge.EVENT_BUS.register(suitHandler);
     }
 
     @EventHandler
@@ -120,6 +129,20 @@ public class OrbitalSunworks {
         loc("item.moduleEfficiencyT2.name", "M\u00f3dulo: Amplificador Fotovoltaico (Tier 2)", "Module: Photovoltaic Amplifier (Tier 2)");
         loc("item.moduleEfficiencyT3.name", "M\u00f3dulo: Amplificador Fotovoltaico (Tier 3)", "Module: Photovoltaic Amplifier (Tier 3)");
 
+        // Novos itens petroquímicos e Traje Espacial EVA
+        loc("item.glassFiber.name", "Fibra de Vidro", "Glass Fiber");
+        loc("item.kevlar.name", "Kevlar", "Kevlar");
+        loc("item.kevlarFiberglass.name", "Kevlar Vidro-Fibroso", "Fiberglass Kevlar");
+        loc("item.oxygenTank.name", "Tanque de Oxig\u00eanio", "Oxygen Tank");
+        loc("item.gasThrusters.name", "Propulsores a G\u00e1s", "Gas Thrusters");
+        loc("item.oilSensor.name", "Sensor de Petr\u00f3leo", "Oil Sensor");
+        loc("item.bucketCrudeOil.name", "Balde de Petr\u00f3leo", "Crude Oil Bucket");
+        loc("item.bucketRefinedOil.name", "Balde de Petr\u00f3leo Refinado", "Refined Oil Bucket");
+        loc("item.spaceHelmet.name", "Capacete Espacial EVA", "EVA Space Helmet");
+        loc("item.spaceChestplate.name", "Torso Espacial EVA", "EVA Space Chestplate");
+        loc("item.spaceLeggings.name", "Cal\u00e7a Espacial EVA", "EVA Space Leggings");
+        loc("item.spaceBoots.name", "Botas Espaciais EVA", "EVA Space Boots");
+
         loc("tile.controlStation.name", "N\u00facleo da Esta\u00e7\u00e3o de Controle", "Control Station Core");
         loc("tile.controlComputer.name", "Terminal de Controle Orbital", "Orbital Control Terminal");
         loc("tile.antennaPort.name", "Porta de Antena RF", "RF Antenna Port");
@@ -139,6 +162,19 @@ public class OrbitalSunworks {
         loc("tile.stationPart.5.name", "Pilar Estrutural da Esta\u00e7\u00e3o", "Station Structural Pillar");
         loc("tile.stationPart.6.name", "Cobertura da Esta\u00e7\u00e3o Orbital", "Station Roof Plating");
         loc("tile.stationPart.7.name", "Friso Luminoso da Esta\u00e7\u00e3o", "Station Luminous Trim");
+
+        // Novas máquinas e fluidos
+        loc("tile.energyInput.name", "Entrada de Energia RF", "RF Energy Input");
+        loc("tile.oilExtractor.name", "Extrator de Petr\u00f3leo", "Oil Extractor");
+        loc("tile.oilRefiner.name", "Refinador de Petr\u00f3leo", "Oil Refiner");
+        loc("tile.synthesizer.name", "M\u00e1quina Sintetizadora", "Synthesizer");
+        loc("tile.fluidCrudeOil.name", "Petr\u00f3leo", "Crude Oil");
+        loc("tile.fluidRefinedOil.name", "Petr\u00f3leo Refinado", "Refined Oil");
+        loc("fluid.crudeOil", "Petr\u00f3leo", "Crude Oil");
+        loc("fluid.refinedOil", "Petr\u00f3leo Refinado", "Refined Oil");
+        loc("death.attack.orbitalSunworks.suffocation",
+            "%1$s sufocou no v\u00e1cuo sem o Traje Espacial",
+            "%1$s suffocated in vacuum without a Space Suit");
     }
 
     @SuppressWarnings("deprecation")
@@ -168,9 +204,11 @@ public class OrbitalSunworks {
         OreDictionary.registerOre("ingotSteel", OSItems.ingotSteel);
         OreDictionary.registerOre("ingotAluminiumAlloy", OSItems.ingotAluminiumAlloy);
         OreDictionary.registerOre("ingotTitaniumAlloy", OSItems.ingotTitaniumAlloy);
+
         OreDictionary.registerOre("itemEnergizedCoal", OSItems.energizedCoal);
         OreDictionary.registerOre("itemCarbonFiber", OSItems.carbonFiber);
         OreDictionary.registerOre("itemSilicon", OSItems.itemSilicon);
+        OreDictionary.registerOre("itemGlassFiber", OSItems.itemGlassFiber);
     }
 
     private void addFurnaceRecipes() {

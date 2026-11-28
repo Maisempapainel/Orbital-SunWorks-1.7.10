@@ -25,6 +25,10 @@ import com.orbitalsunworks.block.BlockStationLamp;
 import com.orbitalsunworks.block.BlockStationPart;
 import com.orbitalsunworks.block.BlockStationStair;
 import com.orbitalsunworks.block.BlockTelescope;
+import com.orbitalsunworks.machine.BlockEnergyInput;
+import com.orbitalsunworks.machine.BlockOilExtractor;
+import com.orbitalsunworks.machine.BlockOilRefiner;
+import com.orbitalsunworks.machine.BlockSynthesizer;
 
 import cpw.mods.fml.common.registry.GameRegistry;
 
@@ -55,7 +59,13 @@ public class OSBlocks {
     public static BlockAntennaTower blockAntennaTower;
     public static BlockTelescope blockTelescope;
 
-    // Novos blocos estruturais e interativos da Estação de Controle
+    // Máquinas de petróleo e entrada de energia RF
+    public static BlockEnergyInput blockEnergyInput;
+    public static BlockOilExtractor blockOilExtractor;
+    public static BlockOilRefiner blockOilRefiner;
+    public static BlockSynthesizer blockSynthesizer;
+
+    // Blocos estruturais e interativos da Estação de Controle
     public static BlockStationPart blockStationPart;
     public static BlockStationStair blockStationStair;
     public static BlockStationDoor blockStationDoor;
@@ -90,6 +100,11 @@ public class OSBlocks {
         blockAntennaTower = new BlockAntennaTower();
         blockTelescope = new BlockTelescope();
 
+        blockEnergyInput = new BlockEnergyInput();
+        blockOilExtractor = new BlockOilExtractor();
+        blockOilRefiner = new BlockOilRefiner();
+        blockSynthesizer = new BlockSynthesizer();
+
         blockStationPart = new BlockStationPart();
         blockStationStair = new BlockStationStair(blockStationPart, BlockStationPart.ACCENT);
         blockStationDoor = new BlockStationDoor();
@@ -113,6 +128,11 @@ public class OSBlocks {
         GameRegistry.registerBlock(blockAntennaTower, "blockAntennaTower");
         GameRegistry.registerBlock(blockTelescope, "blockTelescope");
 
+        GameRegistry.registerBlock(blockEnergyInput, "blockEnergyInput");
+        GameRegistry.registerBlock(blockOilExtractor, "blockOilExtractor");
+        GameRegistry.registerBlock(blockOilRefiner, "blockOilRefiner");
+        GameRegistry.registerBlock(blockSynthesizer, "blockSynthesizer");
+
         GameRegistry.registerBlock(blockStationPart, ItemStationPart.class, "blockStationPart");
         GameRegistry.registerBlock(blockStationStair, "blockStationStair");
         GameRegistry.registerBlock(blockStationDoor, "blockStationDoor");
@@ -122,15 +142,21 @@ public class OSBlocks {
 
         GameRegistry.registerTileEntity(com.orbitalsunworks.craftingstation.TileCraftingStation.class, "tileCraftingStation");
         GameRegistry.registerTileEntity(com.orbitalsunworks.rocket.TileRocket.class, "tileRocket");
-        GameRegistry.registerTileEntity(com.orbitalsunworks.satellite.TileOrbitSatellite.class, "tileOrbitSatellite");
         GameRegistry.registerTileEntity(com.orbitalsunworks.rocket.TileNavRocket.class, "tileNavRocket");
+        GameRegistry.registerTileEntity(com.orbitalsunworks.rocket.TileDispersionRocket.class, "tileDispersionRocket");
+        GameRegistry.registerTileEntity(com.orbitalsunworks.satellite.TileOrbitSatellite.class, "tileOrbitSatellite");
         GameRegistry.registerTileEntity(com.orbitalsunworks.block.TileLaunchPlatform.class, "tileLaunchPlatform");
 
-        GameRegistry.registerTileEntity(com.orbitalsunworks.rocket.TileDispersionRocket.class, "tileDispersionRocket");
         GameRegistry.registerTileEntity(com.orbitalsunworks.satellite.TileControlStation.class, "tileControlStation");
+        GameRegistry.registerTileEntity(com.orbitalsunworks.satellite.TileControlComputer.class, "tileControlComputer");
         GameRegistry.registerTileEntity(com.orbitalsunworks.satellite.TileAntennaPort.class, "tileAntennaPort");
         GameRegistry.registerTileEntity(com.orbitalsunworks.satellite.TileAntennaTower.class, "tileAntennaTower");
         GameRegistry.registerTileEntity(com.orbitalsunworks.satellite.TileTelescope.class, "tileTelescope");
+
+        GameRegistry.registerTileEntity(com.orbitalsunworks.machine.TileEnergyInput.class, "tileEnergyInput");
+        GameRegistry.registerTileEntity(com.orbitalsunworks.machine.TileOilExtractor.class, "tileOilExtractor");
+        GameRegistry.registerTileEntity(com.orbitalsunworks.machine.TileOilRefiner.class, "tileOilRefiner");
+        GameRegistry.registerTileEntity(com.orbitalsunworks.machine.TileSynthesizer.class, "tileSynthesizer");
 
         GameRegistry.registerTileEntity(com.orbitalsunworks.satellite.TileStationDoor.class, "tileStationDoor");
         GameRegistry.registerTileEntity(com.orbitalsunworks.satellite.TileStationLamp.class, "tileStationLamp");

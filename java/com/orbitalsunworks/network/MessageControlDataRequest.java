@@ -12,6 +12,7 @@ import net.minecraft.world.World;
 import com.orbitalsunworks.satellite.SatelliteManager;
 import com.orbitalsunworks.satellite.SatelliteManager.MeteorEvent;
 import com.orbitalsunworks.satellite.SatelliteManager.Satellite;
+import com.orbitalsunworks.satellite.TileAntennaPort;
 
 import cpw.mods.fml.common.network.simpleimpl.IMessage;
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
@@ -73,6 +74,8 @@ public class MessageControlDataRequest implements IMessage {
                 info.health = s.health;
                 info.generationRFt = s.generationRFt;
                 info.targeted = ev != null && ev.active && ev.targetSatIds.contains(s.id);
+                info.shieldTier = s.getShieldTier();
+                info.efficiencyPct = Math.round(s.getEfficiencyBonus() * 100f);
                 info.modules = new ArrayList<String>(s.modules);
                 out.add(info);
                 if (s.health > 0f) {
@@ -81,14 +84,56 @@ public class MessageControlDataRequest implements IMessage {
             }
 
             long antennaStored = 0L;
-            long antennaMax = 0L;
-            TileEntity te = world.getTileEntity(msg.x, msg.y, msg.z);
-            if (te != null) {
-                antennaStored = readEnergyLong(te, "getEnergyStored");
-                antennaMax = readEnergyLong(te, "getMaxEnergyStored");
+            long antennaMax = TileAntennaPort.CAPACITY_T1;
+            int antennaTier = 1;
+
+            TileAntennaPort port = findAntennaPort(world, msg.x, msg.y, msg.z, pid, pname);
+            if (port != null) {
+                antennaStored = port.getEnergyLong();
+                antennaMax = port.getCapacityLong();
+                antennaTier = port.getAntennaTier();
+            } else {
+                TileEntity te = world.getTileEntity(msg.x, msg.y, msg.z);
+                if (te != null) {
+                    long s = readEnergyLong(te, "getEnergyStored");
+                    long m = readEnergyLong(te, "getMaxEnergyStored");
+                    if (m > 0L) {
+                        antennaStored = s;
+                        antennaMax = m;
+                    }
+                }
             }
 
-            return new MessageControlDataResponse(totalGen, antennaStored, antennaMax, out);
+            return new MessageControlDataResponse(totalGen, antennaStored, antennaMax, antennaTier, out);
+        }
+
+        private static TileAntennaPort findAntennaPort(World world, int refX, int refY, int refZ,
+                UUID pid, String pname) {
+            TileEntity direct = world.getTileEntity(refX, refY, refZ);
+            if (direct instanceof TileAntennaPort) {
+                return (TileAntennaPort) direct;
+            }
+            TileAntennaPort best = null;
+            double bestDistSq = Double.MAX_VALUE;
+            List loaded = new ArrayList(world.loadedTileEntityList);
+            for (Object o : loaded) {
+                if (!(o instanceof TileAntennaPort)) {
+                    continue;
+                }
+                TileAntennaPort p = (TileAntennaPort) o;
+                boolean ownerOk = (pid != null && pid.equals(p.getOwnerUUID()))
+                    || (pname != null && !pname.isEmpty() && pname.equalsIgnoreCase(p.getOwnerName()));
+                double dSq = (p.xCoord - refX) * (double) (p.xCoord - refX)
+                    + (p.yCoord - refY) * (double) (p.yCoord - refY)
+                    + (p.zCoord - refZ) * (double) (p.zCoord - refZ);
+                if (ownerOk || dSq <= 1024.0) {
+                    if (dSq < bestDistSq) {
+                        bestDistSq = dSq;
+                        best = p;
+                    }
+                }
+            }
+            return best;
         }
 
         private static long readEnergyLong(TileEntity te, String methodName) {

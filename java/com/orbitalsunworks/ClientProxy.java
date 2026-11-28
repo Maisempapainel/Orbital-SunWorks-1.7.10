@@ -45,6 +45,7 @@ public class ClientProxy extends CommonProxy {
         ClientRegistry.bindTileEntitySpecialRenderer(
             com.orbitalsunworks.satellite.TileOrbitSatellite.class,
             new com.orbitalsunworks.client.render.TileOrbitSatelliteRenderer());
+
         ClientRegistry.bindTileEntitySpecialRenderer(
             com.orbitalsunworks.block.TileLaunchPlatform.class,
             new com.orbitalsunworks.client.render.TileLaunchPlatformRenderer());
@@ -58,7 +59,6 @@ public class ClientProxy extends CommonProxy {
         ClientRegistry.bindTileEntitySpecialRenderer(
             com.orbitalsunworks.satellite.TileTelescope.class,
             new com.orbitalsunworks.client.render.TileTelescopeRenderer());
-
         ClientRegistry.bindTileEntitySpecialRenderer(
             com.orbitalsunworks.satellite.TileStationDoor.class,
             new com.orbitalsunworks.client.render.TileStationDoorRenderer());
@@ -71,6 +71,11 @@ public class ClientProxy extends CommonProxy {
         ClientRegistry.bindTileEntitySpecialRenderer(
             com.orbitalsunworks.satellite.TileControlKeyboard.class,
             new com.orbitalsunworks.client.render.TileControlKeyboardRenderer());
+
+        // Extrator de Petróleo 3D animado (Pumpjack / Gangorra)
+        ClientRegistry.bindTileEntitySpecialRenderer(
+            com.orbitalsunworks.machine.TileOilExtractor.class,
+            new com.orbitalsunworks.client.render.TileOilExtractorRenderer());
 
         FMLCommonHandler.instance().bus().register(
             new com.orbitalsunworks.client.handler.LaunchShakeHandler());
@@ -89,5 +94,10 @@ public class ClientProxy extends CommonProxy {
             new com.orbitalsunworks.client.handler.ClientMeteorHandler();
         FMLCommonHandler.instance().bus().register(meteorHandler);
         MinecraftForge.EVENT_BUS.register(meteorHandler);
+
+        com.orbitalsunworks.client.handler.SpaceHypoxiaOverlay hypoxiaOverlay =
+            new com.orbitalsunworks.client.handler.SpaceHypoxiaOverlay();
+        FMLCommonHandler.instance().bus().register(hypoxiaOverlay);
+        MinecraftForge.EVENT_BUS.register(hypoxiaOverlay);
     }
 }

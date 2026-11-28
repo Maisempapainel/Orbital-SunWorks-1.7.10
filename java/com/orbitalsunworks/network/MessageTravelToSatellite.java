@@ -11,6 +11,7 @@ import net.minecraft.world.World;
 import com.orbitalsunworks.OSBlocks;
 import com.orbitalsunworks.OSItems;
 import com.orbitalsunworks.block.BlockNavRocket;
+import com.orbitalsunworks.handler.SpaceSuitHandler;
 import com.orbitalsunworks.rocket.EntityNavRocket;
 import com.orbitalsunworks.satellite.SatelliteManager;
 import com.orbitalsunworks.util.OSUtils;
@@ -67,6 +68,13 @@ public class MessageTravelToSatellite implements IMessage {
             World world = player.worldObj;
 
             if (OrbitDimensionManager.isOrbitWorld(world)) {
+                return null;
+            }
+
+            if (!player.capabilities.isCreativeMode && !SpaceSuitHandler.hasFullSuit(player)) {
+                world.playSoundAtEntity(player, "note.bass", 0.7f, 0.6f);
+                OSUtils.sendChat(player,
+                    "\u00a7c[Orbital Sunworks] Decolagem negada! Vista o Traje Espacial completo (Capacete, Peitoral, Cal\u00e7a e Botas) antes de embarcar.");
                 return null;
             }
 

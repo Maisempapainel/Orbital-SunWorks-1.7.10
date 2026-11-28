@@ -2,13 +2,16 @@ package com.orbitalsunworks;
 
 import net.minecraft.item.Item;
 
+import com.orbitalsunworks.fluid.OSFluids;
 import com.orbitalsunworks.item.ItemAntenna;
 import com.orbitalsunworks.item.ItemControlStation;
 import com.orbitalsunworks.item.ItemDispersionRocket;
 import com.orbitalsunworks.item.ItemManual;
 import com.orbitalsunworks.item.ItemModule;
 import com.orbitalsunworks.item.ItemNavigationRocket;
+import com.orbitalsunworks.item.ItemOilSensor;
 import com.orbitalsunworks.item.ItemRepairKit;
+import com.orbitalsunworks.item.ItemSpaceSuit;
 import com.orbitalsunworks.satellite.SatelliteManager;
 
 import cpw.mods.fml.common.registry.GameRegistry;
@@ -32,6 +35,21 @@ public class OSItems {
     public static Item carbonFiber;
     public static Item itemCircuit;
     public static Item itemSilicon;
+
+    // Cadeia de petróleo e traje espacial
+    public static Item itemGlassFiber;
+    public static Item itemKevlar;
+    public static Item itemKevlarFiberglass;
+    public static Item itemOxygenTank;
+    public static Item itemGasThrusters;
+    public static Item itemOilSensor;
+    public static Item bucketCrudeOil;
+    public static Item bucketRefinedOil;
+
+    public static Item spaceHelmet;
+    public static Item spaceChestplate;
+    public static Item spaceLeggings;
+    public static Item spaceBoots;
 
     // Componentes
     public static Item itemControlModule;
@@ -80,6 +98,30 @@ public class OSItems {
         itemCircuit = register("circuit");
         itemSilicon = register("silicon");
 
+        itemGlassFiber = register("glassFiber");
+        itemKevlar = register("kevlar");
+        itemKevlarFiberglass = register("kevlarFiberglass");
+        itemOxygenTank = register("oxygenTank");
+        itemGasThrusters = register("gasThrusters");
+
+        itemOilSensor = new ItemOilSensor();
+        GameRegistry.registerItem(itemOilSensor, "oilSensor");
+
+        bucketCrudeOil = new OSFluids.ItemOilBucket(OSFluids.blockCrudeOil, "bucketCrudeOil");
+        GameRegistry.registerItem(bucketCrudeOil, "bucketCrudeOil");
+
+        bucketRefinedOil = new OSFluids.ItemOilBucket(OSFluids.blockRefinedOil, "bucketRefinedOil");
+        GameRegistry.registerItem(bucketRefinedOil, "bucketRefinedOil");
+
+        spaceHelmet = new ItemSpaceSuit(0, "spaceHelmet");
+        GameRegistry.registerItem(spaceHelmet, "spaceHelmet");
+        spaceChestplate = new ItemSpaceSuit(1, "spaceChestplate");
+        GameRegistry.registerItem(spaceChestplate, "spaceChestplate");
+        spaceLeggings = new ItemSpaceSuit(2, "spaceLeggings");
+        GameRegistry.registerItem(spaceLeggings, "spaceLeggings");
+        spaceBoots = new ItemSpaceSuit(3, "spaceBoots");
+        GameRegistry.registerItem(spaceBoots, "spaceBoots");
+
         itemControlModule = register("controlModule");
         itemAntennaT1 = registerAntenna(1);
         itemAntennaT2 = registerAntenna(2);
@@ -95,7 +137,6 @@ public class OSItems {
         itemDispersionRocket = new ItemDispersionRocket();
         GameRegistry.registerItem(itemDispersionRocket, "dispersionRocket");
 
-        // Módulos (garantindo T1..T3 de Defletor Cinético e T1..T3 de Amplificador Fotovoltaico)
         itemModuleDebrisShield = new ItemModule("moduleDebrisShield", SatelliteManager.MOD_SHIELD_T1);
         GameRegistry.registerItem(itemModuleDebrisShield, "moduleDebrisShield");
 
