@@ -1,10 +1,15 @@
 package com.orbitalsunworks;
 
 import net.minecraft.item.Item;
-import net.minecraftforge.oredict.OreDictionary;
 
 import com.orbitalsunworks.item.ItemAntenna;
+import com.orbitalsunworks.item.ItemControlStation;
+import com.orbitalsunworks.item.ItemDispersionRocket;
+import com.orbitalsunworks.item.ItemManual;
 import com.orbitalsunworks.item.ItemModule;
+import com.orbitalsunworks.item.ItemNavigationRocket;
+import com.orbitalsunworks.item.ItemRepairKit;
+import com.orbitalsunworks.satellite.SatelliteManager;
 
 import cpw.mods.fml.common.registry.GameRegistry;
 
@@ -13,9 +18,7 @@ import cpw.mods.fml.common.registry.GameRegistry;
  */
 public class OSItems {
 
-    // ------------------------------------------------------------------
     // Lingotes e materiais base
-    // ------------------------------------------------------------------
     public static Item ingotRedmeg;
     public static Item ingotYellomite;
     public static Item ingotCopper;
@@ -28,12 +31,9 @@ public class OSItems {
     public static Item energizedCoal;
     public static Item carbonFiber;
     public static Item itemCircuit;
-    /** Silício — universal (OreDict "itemSilicon", como IC2/AE2). */
     public static Item itemSilicon;
 
-    // ------------------------------------------------------------------
     // Componentes
-    // ------------------------------------------------------------------
     public static Item itemControlModule;
     public static Item itemAntennaT1;
     public static Item itemAntennaT2;
@@ -42,20 +42,30 @@ public class OSItems {
     public static Item itemAntennaT5;
     public static Item itemSolarPanelT1;
 
-    // ------------------------------------------------------------------
-    // Foguete e módulos
-    // ------------------------------------------------------------------
-    /** Item do foguete Tier 1 (coloca o bloco do foguete na plataforma). */
+    // Foguetes, módulos e equipamentos
     public static Item itemRocketT1;
-    /** Foguete de Navegação — visita os satélites em órbita (v0.6.0). */
     public static Item itemNavRocket;
-    /** Módulo "Escudo de Detrito" - mitiga o desgaste por poeira espacial. */
+    public static Item itemDispersionRocket;
+
     public static Item itemModuleDebrisShield;
-    /** Manual do mod - livro com todas as receitas. */
+    public static Item itemModuleDebrisShieldT2;
+    public static Item itemModuleDebrisShieldT3;
+    public static Item itemModuleEfficiencyT1;
+    public static Item itemModuleEfficiencyT2;
+    public static Item itemModuleEfficiencyT3;
+
+    // Aliases de compatibilidade
+    public static Item itemModuleShieldT2;
+    public static Item itemModuleShieldT3;
+    public static Item itemModuleEffT1;
+    public static Item itemModuleEffT2;
+    public static Item itemModuleEffT3;
+
+    public static Item itemRepairKit;
+    public static Item itemControlStation;
     public static Item itemManual;
 
     public static void init() {
-        // Materiais base - nomes simples, sem tooltips especiais
         ingotRedmeg = register("ingotRedmeg");
         ingotYellomite = register("ingotYellomite");
         ingotCopper = register("ingotCopper");
@@ -70,10 +80,7 @@ public class OSItems {
         itemCircuit = register("circuit");
         itemSilicon = register("silicon");
 
-        // Componentes
         itemControlModule = register("controlModule");
-        // Antenas: registra T1 (usada na receita do foguete); os outros
-        // tiers existem mas ficam SEM receita por enquanto (só T1 por ora).
         itemAntennaT1 = registerAntenna(1);
         itemAntennaT2 = registerAntenna(2);
         itemAntennaT3 = registerAntenna(3);
@@ -81,15 +88,44 @@ public class OSItems {
         itemAntennaT5 = registerAntenna(5);
         itemSolarPanelT1 = register("solarPanelT1");
 
-        // Foguete e módulos
         itemRocketT1 = register("rocketT1");
-        itemNavRocket = new com.orbitalsunworks.item.ItemNavigationRocket();
+        itemNavRocket = new ItemNavigationRocket();
         GameRegistry.registerItem(itemNavRocket, "navRocket");
-        itemModuleDebrisShield = new ItemModule("moduleDebrisShield");
+
+        itemDispersionRocket = new ItemDispersionRocket();
+        GameRegistry.registerItem(itemDispersionRocket, "dispersionRocket");
+
+        // Módulos (garantindo T1..T3 de Defletor Cinético e T1..T3 de Amplificador Fotovoltaico)
+        itemModuleDebrisShield = new ItemModule("moduleDebrisShield", SatelliteManager.MOD_SHIELD_T1);
         GameRegistry.registerItem(itemModuleDebrisShield, "moduleDebrisShield");
 
-        // Manual do mod (livrinho com todas as receitas)
-        itemManual = new com.orbitalsunworks.item.ItemManual();
+        itemModuleDebrisShieldT2 = new ItemModule("moduleDebrisShieldT2", SatelliteManager.MOD_SHIELD_T2);
+        GameRegistry.registerItem(itemModuleDebrisShieldT2, "moduleDebrisShieldT2");
+        itemModuleShieldT2 = itemModuleDebrisShieldT2;
+
+        itemModuleDebrisShieldT3 = new ItemModule("moduleDebrisShieldT3", SatelliteManager.MOD_SHIELD_T3);
+        GameRegistry.registerItem(itemModuleDebrisShieldT3, "moduleDebrisShieldT3");
+        itemModuleShieldT3 = itemModuleDebrisShieldT3;
+
+        itemModuleEfficiencyT1 = new ItemModule("moduleEfficiencyT1", SatelliteManager.MOD_EFF_T1);
+        GameRegistry.registerItem(itemModuleEfficiencyT1, "moduleEfficiencyT1");
+        itemModuleEffT1 = itemModuleEfficiencyT1;
+
+        itemModuleEfficiencyT2 = new ItemModule("moduleEfficiencyT2", SatelliteManager.MOD_EFF_T2);
+        GameRegistry.registerItem(itemModuleEfficiencyT2, "moduleEfficiencyT2");
+        itemModuleEffT2 = itemModuleEfficiencyT2;
+
+        itemModuleEfficiencyT3 = new ItemModule("moduleEfficiencyT3", SatelliteManager.MOD_EFF_T3);
+        GameRegistry.registerItem(itemModuleEfficiencyT3, "moduleEfficiencyT3");
+        itemModuleEffT3 = itemModuleEfficiencyT3;
+
+        itemRepairKit = new ItemRepairKit();
+        GameRegistry.registerItem(itemRepairKit, "repairKit");
+
+        itemControlStation = new ItemControlStation();
+        GameRegistry.registerItem(itemControlStation, "controlStation");
+
+        itemManual = new ItemManual();
         GameRegistry.registerItem(itemManual, "manual");
     }
 
@@ -102,7 +138,6 @@ public class OSItems {
         return item;
     }
 
-    /** Antena tem classe própria (tooltip de tier) — registra igual. */
     private static Item registerAntenna(int tier) {
         Item item = new ItemAntenna(tier);
         GameRegistry.registerItem(item, "antennaT" + tier);
